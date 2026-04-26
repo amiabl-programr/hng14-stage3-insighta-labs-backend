@@ -26,3 +26,23 @@ model Profile {
 
   @@map("profiles")
 }
+
+enum Role {
+  ANALYST
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(uuid(7))
+  github_id     Int    @unique
+  username      String    
+  email         String?      
+  avatar_url    String    
+  role          Role      @default(ANALYST)
+  is_active     Boolean   @default(true)
+  last_login_at DateTime? 
+  created_at    DateTime  @default(now()) 
+
+  @@map("users")
+}
+
