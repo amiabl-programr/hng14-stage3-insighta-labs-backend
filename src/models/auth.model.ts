@@ -1,7 +1,7 @@
 import {prisma} from '../lib/prisma.js';
-import { User } from '../generated/prisma/client.js';
+import { GithubUserData } from '../services/auth.service.js';
 
-export async function saveUser(user: User) {
+export async function saveUser(user: GithubUserData) {
   try {
   const githubId = Number(user.github_id);
 
@@ -22,7 +22,7 @@ export async function saveUser(user: User) {
     create: {
       github_id: githubId,
       username: user.username,
-      email: user.email ?? undefined,
+      email: user.email,
       avatar_url: user.avatar_url,
       role: "ANALYST",
       is_active: true,

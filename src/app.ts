@@ -2,6 +2,8 @@ import express from 'express';
 import profilesRouter from './routes/profile.routes.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import authRouter from './routes/auth.route.js';
+import { AppError } from './utils/AppError.js';
+
 
 const app = express();
 
@@ -19,9 +21,8 @@ app.use(express.json());
 app.use('/api/profiles', profilesRouter);
 app.use('/auth', authRouter);
 
-
-app.use((req, res) => {
-  res.status(404).json({ status: 'error', message: 'Route not found' });
+app.use((req, res, next) => {
+  next(new AppError('Route not found', 404));
 });
 
 

@@ -27,12 +27,19 @@ export async function getGithubUserData(token:string) {
     return userData;
 }
 
-export async function createOrUpdateUser(userData: any) {
+export interface GithubUserData {
+    github_id: number;
+    username: string;
+    email: string | null;
+    avatar_url: string;
+}
+
+export async function createOrUpdateUser(userData: GithubUserData) {
     try {
         const user = await saveUser(userData);
         return user;
     } catch(err: unknown) {
         console.log((err as Error).message);
-        return err;
+        throw err;
     }
 }
