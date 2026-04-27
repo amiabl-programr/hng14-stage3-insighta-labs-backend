@@ -17,45 +17,36 @@ const profiles = rawData.profiles as SeedProfile[];
 
 async function main() {
   try {
-    console.log('Starting seed...');
-    console.log(`Found ${profiles.length} profiles to seed`);
+    if (profiles.length === 0) {
+      throw new Error('No profiles found in the seed data');
+    }
 
     // Single query to get all existing names
     const existing = await prisma.profile.findMany({ select: { name: true } });
-    const existingNames = new Set(existing.map(p => p.name));
+    const existingNames = new Set(existing.map((p) => p.name));
 
-    const toCreate = profiles.filter(p => !existingNames.has(p.name));
-    const skippedCount = profiles.length - toCreate.length;
-
-    console.log(`Existing profiles in database: ${existingNames.size}`);
-    console.log(`To create: ${toCreate.length}, To skip: ${skippedCount}`);
+    const toCreate = profiles.filter((p) => !existingNames.has(p.name));
+    // const skippedCount = profiles.length - toCreate.length;
 
     // Batch insert in chunks to avoid memory issues on large datasets
     const CHUNK_SIZE = 500;
-    let createdCount = 0;
+    // let createdCount = 0;
 
     for (let i = 0; i < toCreate.length; i += CHUNK_SIZE) {
       const chunk = toCreate.slice(i, i + CHUNK_SIZE);
 
       await prisma.profile.createMany({
-        data: chunk.map(profile => ({
+        data: chunk.map((profile) => ({
           id: uuidv7(),
           ...profile,
         })),
         skipDuplicates: true,
       });
 
-      createdCount += chunk.length;
-      console.log(`Progress: ${Math.min(createdCount, toCreate.length)}/${toCreate.length}`);
+      // createdCount += chunk.length;
     }
-
-    console.log(`\nSeed completed!`);
-    console.log(`Created: ${createdCount} profiles`);
-    console.log(`Skipped: ${skippedCount} profiles (already exist)`);
-    console.log(`Total in database: ${await prisma.profile.count()}`);
-  } catch (error) {
-    console.error('Seed failed:', error);
-    process.exit(1);
+  } catch {
+    throw new Error();
   } finally {
     await prisma.$disconnect();
   }

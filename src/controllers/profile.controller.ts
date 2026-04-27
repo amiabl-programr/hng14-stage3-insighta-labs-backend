@@ -4,7 +4,7 @@ import {
   parseNaturalLanguageQuery,
 } from '../services/profile.service.js';
 import { catchAsync } from '../utils/catchAsync.js';
-import { AppError } from '../utils/AppError.js'
+import { AppError } from '../utils/AppError.js';
 import { sendSuccessResponse } from '../utils/responseHandler.js';
 import { Profile } from '../generated/prisma/client.js';
 
@@ -36,8 +36,8 @@ export const getProfiles = catchAsync(async (req: Request, res: Response) => {
     limit = '10',
   } = req.query;
 
-  let pageNum = parseInt(page as string, 10);
-  let limitNum = parseInt(limit as string, 10);
+  const pageNum = parseInt(page as string, 10);
+  const limitNum = parseInt(limit as string, 10);
 
   if (isNaN(pageNum) || pageNum < 1) {
     throw new AppError('Invalid query parameters', 422);
@@ -61,7 +61,10 @@ export const getProfiles = catchAsync(async (req: Request, res: Response) => {
     throw new AppError('Invalid query parameters', 422);
   }
 
-  if ((min_gender_probability && isNaN(minGenderProb!)) || (min_country_probability && isNaN(minCountryProb!))) {
+  if (
+    (min_gender_probability && isNaN(minGenderProb!)) ||
+    (min_country_probability && isNaN(minCountryProb!))
+  ) {
     throw new AppError('Invalid query parameters', 422);
   }
 
@@ -90,51 +93,69 @@ export const getProfiles = catchAsync(async (req: Request, res: Response) => {
     {
       page: pageNum,
       limit: limitNum,
-      sort_by: sort_by as "age" | "created_at" | "gender_probability" | undefined,
-      order: order as "asc" | "desc" | undefined,
-    }
+      sort_by: sort_by as
+        | 'age'
+        | 'created_at'
+        | 'gender_probability'
+        | undefined,
+      order: order as 'asc' | 'desc' | undefined,
+    },
   );
 
-  return sendSuccessResponse(res, 200, "Profiles retrieved successfully", result.data.map((p: unknown) => formatProfileFull(p as Profile)), {
-    page: result.page,
-    limit: result.limit,
-    total: result.total,
-  });
+  return sendSuccessResponse(
+    res,
+    200,
+    'Profiles retrieved successfully',
+    result.data.map((p: unknown) => formatProfileFull(p as Profile)),
+    {
+      page: result.page,
+      limit: result.limit,
+      total: result.total,
+    },
+  );
 });
 
-export const searchProfiles = catchAsync(async (req: Request, res: Response) => {
-  const { q, page = '1', limit = '10' } = req.query;
+export const searchProfiles = catchAsync(
+  async (req: Request, res: Response) => {
+    const { q, page = '1', limit = '10' } = req.query;
 
-  // Validate query parameter
-  if (!q || typeof q !== 'string' || q.trim() === '') {
-    throw new AppError('Query parameter q is required', 400);
-  }
+    // Validate query parameter
+    if (!q || typeof q !== 'string' || q.trim() === '') {
+      throw new AppError('Query parameter q is required', 400);
+    }
 
-  const filters = parseNaturalLanguageQuery(q);
+    const filters = parseNaturalLanguageQuery(q);
 
-  if (filters === null) {
-    throw new AppError('Unable to interpret query', 422);
-  }
+    if (filters === null) {
+      throw new AppError('Unable to interpret query', 422);
+    }
 
-  let pageNum = parseInt(page as string, 10);
-  let limitNum = parseInt(limit as string, 10);
+    let pageNum = parseInt(page as string, 10);
+    let limitNum = parseInt(limit as string, 10);
 
-  if (isNaN(pageNum) || pageNum < 1) {
-    pageNum = 1;
-  }
+    if (isNaN(pageNum) || pageNum < 1) {
+      pageNum = 1;
+    }
 
-  if (isNaN(limitNum) || limitNum < 1 || limitNum > 50) {
-    limitNum = 10;
-  }
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 50) {
+      limitNum = 10;
+    }
 
-  const result = await listProfiles(filters, {
-    page: pageNum,
-    limit: limitNum,
-  });
+    const result = await listProfiles(filters, {
+      page: pageNum,
+      limit: limitNum,
+    });
 
-  return sendSuccessResponse(res, 200, "Profiles retrieved successfully", result.data.map((p: unknown) => formatProfileFull(p as Profile)), {
-    page: result.page,
-    limit: result.limit,
-    total: result.total,
-  });
-});
+    return sendSuccessResponse(
+      res,
+      200,
+      'Profiles retrieved successfully',
+      result.data.map((p: unknown) => formatProfileFull(p as Profile)),
+      {
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+      },
+    );
+  },
+);

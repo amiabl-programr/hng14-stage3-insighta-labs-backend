@@ -1,7 +1,5 @@
-import {prisma} from '../lib/prisma.js';
+import { prisma } from '../lib/prisma.js';
 import { Profile } from '../generated/prisma/client.js';
-
-
 
 export interface ProfileFilters {
   gender?: string;
@@ -27,11 +25,9 @@ export interface PaginatedResult {
   total: number;
 }
 
-
-
 export const getAllProfiles = async (
   filters: ProfileFilters,
-  options: QueryOptions
+  options: QueryOptions,
 ): Promise<PaginatedResult> => {
   const where: Record<string, unknown> = {};
 
@@ -45,27 +41,27 @@ export const getAllProfiles = async (
     where.age_group = filters.age_group.toLowerCase();
   }
   if (filters.min_age !== undefined) {
-    where.age = { ...((where.age as any) || {}), gte: filters.min_age };
+    where.age = { ...(where.age || {}), gte: filters.min_age };
   }
   if (filters.max_age !== undefined) {
-    where.age = { ...((where.age as any) || {}), lte: filters.max_age };
+    where.age = { ...(where.age || {}), lte: filters.max_age };
   }
   if (filters.min_gender_probability !== undefined) {
     where.gender_probability = {
-      ...((where.gender_probability as any) || {}),
+      ...(where.gender_probability || {}),
       gte: filters.min_gender_probability,
     };
   }
   if (filters.min_country_probability !== undefined) {
     where.country_probability = {
-      ...((where.country_probability as any) || {}),
+      ...(where.country_probability || {}),
       gte: filters.min_country_probability,
     };
   }
 
   const skip = (options.page - 1) * options.limit;
   const orderBy: Record<string, string> = {};
-  
+
   if (options.sort_by) {
     orderBy[options.sort_by] = options.order || 'asc';
   }
@@ -82,4 +78,3 @@ export const getAllProfiles = async (
 
   return { data, page: options.page, limit: options.limit, total };
 };
-
