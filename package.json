@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "prisma generate && tsc",
-    "start": "node dist/server.js",
+    "start": "npm run seed:prod && node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -19,6 +19,7 @@
     "seed": "tsx src/utils/seed_data/seed.ts",
     "seed:prod": "node dist/utils/seed_data/seed.js",
     "postinstall": "prisma generate"
+    
   },
   "keywords": [],
   "author": "",
@@ -55,5 +56,8 @@
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.59.0"
+  },
+  "prisma": {
+    "seed": "tsx src/utils/seed_data/seed.ts"
   }
 }
