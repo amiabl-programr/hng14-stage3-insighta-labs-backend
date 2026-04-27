@@ -19,12 +19,9 @@ export const handleCallbackController = catchAsync(
     const code = req.query.code as string;
 
     const tokenResponse = await handleCallback(code);
-    console.log('token in controller', tokenResponse);
-
     const userDataFromGithub = await getGithubUserData(
       tokenResponse.access_token,
     );
-    console.log('user data in controller', userDataFromGithub);
 
     const userData = {
       github_id: userDataFromGithub.id,
@@ -34,7 +31,6 @@ export const handleCallbackController = catchAsync(
     };
 
     const createdUser = await createOrUpdateUser(userData);
-    console.log('created user in controller', createdUser);
 
     return sendSuccessResponse(
       res,

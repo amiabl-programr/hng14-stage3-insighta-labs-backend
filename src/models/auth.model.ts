@@ -31,7 +31,7 @@ export async function saveUser(user: GithubUserData) {
     });
 
     return savedUser;
-  } catch (err) {
+  } catch {
     throw new Error('GitHub auth failed');
   }
 }

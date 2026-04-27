@@ -1,7 +1,6 @@
 import { prisma } from '../../lib/prisma.js';
 import { uuidv7 } from 'uuidv7';
 import rawData from './seed_profiles.json' with { type: 'json' };
-import { AppError } from '../AppError.js';
 
 interface SeedProfile {
   name: string;
@@ -27,13 +26,11 @@ async function main() {
     const existingNames = new Set(existing.map((p) => p.name));
 
     const toCreate = profiles.filter((p) => !existingNames.has(p.name));
-    const skippedCount = profiles.length - toCreate.length;
-
-
+    // const skippedCount = profiles.length - toCreate.length;
 
     // Batch insert in chunks to avoid memory issues on large datasets
     const CHUNK_SIZE = 500;
-    let createdCount = 0;
+    // let createdCount = 0;
 
     for (let i = 0; i < toCreate.length; i += CHUNK_SIZE) {
       const chunk = toCreate.slice(i, i + CHUNK_SIZE);
@@ -46,12 +43,10 @@ async function main() {
         skipDuplicates: true,
       });
 
-      createdCount += chunk.length;
+      // createdCount += chunk.length;
     }
-
-  } catch (error) {
-    throw new Error;
-    process.exit(1);
+  } catch {
+    throw new Error();
   } finally {
     await prisma.$disconnect();
   }

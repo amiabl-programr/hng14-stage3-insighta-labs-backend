@@ -8,13 +8,11 @@ export const errorHandler = (
   res: Response,
 ) => {
   if (!(err instanceof AppError) || !err.isOperational) {
-    console.error('ERROR :', err);
     throw new AppError(err.message, 500, false, err.stack);
   }
 
   if (err instanceof AppError) {
     if (err.statusCode === 502 && err.api) {
-      throw new AppError(err.message, 502, false, err.stack);
       return sendErrorResponse(
         res,
         502,
