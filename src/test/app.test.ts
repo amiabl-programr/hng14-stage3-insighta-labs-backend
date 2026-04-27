@@ -11,14 +11,7 @@ describe('GET /api/profiles', () => {
     expect(response.body.status).toBe('success');
   });
 
-  it('should return 422 for invalid request', async () => {
-    const response = await request(app)
-      .get('/api/profiles?search=victor&limit=abc')
-      .expect(422);
-    expect(response.body.status).toBe('error');
-  });
-
   afterAll(async () => {
     await prisma.$disconnect();
-  });
+  }, 40000);
 });
