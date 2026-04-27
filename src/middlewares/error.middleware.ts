@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { AppError } from '../utils/AppError.js';
 import { sendErrorResponse } from '../utils/responseHandler.js';
 
@@ -6,7 +6,6 @@ export const errorHandler = (
   err: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction,
 ) => {
   if (!(err instanceof AppError) || !err.isOperational) {
     console.error('ERROR :', err);
