@@ -22,9 +22,9 @@ async function main() {
 
     // Single query to get all existing names
     const existing = await prisma.profile.findMany({ select: { name: true } });
-    const existingNames = new Set(existing.map(p => p.name));
+    const existingNames = new Set(existing.map((p) => p.name));
 
-    const toCreate = profiles.filter(p => !existingNames.has(p.name));
+    const toCreate = profiles.filter((p) => !existingNames.has(p.name));
     const skippedCount = profiles.length - toCreate.length;
 
     console.log(`Existing profiles in database: ${existingNames.size}`);
@@ -38,7 +38,7 @@ async function main() {
       const chunk = toCreate.slice(i, i + CHUNK_SIZE);
 
       await prisma.profile.createMany({
-        data: chunk.map(profile => ({
+        data: chunk.map((profile) => ({
           id: uuidv7(),
           ...profile,
         })),
@@ -46,7 +46,9 @@ async function main() {
       });
 
       createdCount += chunk.length;
-      console.log(`Progress: ${Math.min(createdCount, toCreate.length)}/${toCreate.length}`);
+      console.log(
+        `Progress: ${Math.min(createdCount, toCreate.length)}/${toCreate.length}`,
+      );
     }
 
     console.log(`\nSeed completed!`);

@@ -5,7 +5,7 @@ export const sendSuccessResponse = <T>(
   statusCode: number,
   message: string,
   data?: T,
-  meta?: Record<string, unknown>
+  meta?: Record<string, unknown>,
 ) => {
   const response: Record<string, unknown> = {
     status: 'success',
@@ -27,7 +27,7 @@ export const sendErrorResponse = (
   res: Response,
   statusCode: number,
   message: string,
-  errors?: unknown
+  errors?: unknown,
 ) => {
   const response: Record<string, unknown> = {
     status: 'error',

@@ -1,5 +1,10 @@
-import { Router } from "express";
-import {getRefreshToken, getGithubAuthCode, handleCallbackController, handleLogout} from '../controllers/auth.controller.js'
+import { Router } from 'express';
+import {
+  getRefreshToken,
+  getGithubAuthCode,
+  handleCallbackController,
+  handleLogout,
+} from '../controllers/auth.controller.js';
 
 const router = Router();
 

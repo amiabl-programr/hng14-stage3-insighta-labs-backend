@@ -1,7 +1,5 @@
-import {prisma} from '../lib/prisma.js';
+import { prisma } from '../lib/prisma.js';
 import { Profile } from '../generated/prisma/client.js';
-
-
 
 export interface ProfileFilters {
   gender?: string;
@@ -27,11 +25,9 @@ export interface PaginatedResult {
   total: number;
 }
 
-
-
 export const getAllProfiles = async (
   filters: ProfileFilters,
-  options: QueryOptions
+  options: QueryOptions,
 ): Promise<PaginatedResult> => {
   const where: Record<string, unknown> = {};
 
@@ -65,7 +61,7 @@ export const getAllProfiles = async (
 
   const skip = (options.page - 1) * options.limit;
   const orderBy: Record<string, string> = {};
-  
+
   if (options.sort_by) {
     orderBy[options.sort_by] = options.order || 'asc';
   }
@@ -82,4 +78,3 @@ export const getAllProfiles = async (
 
   return { data, page: options.page, limit: options.limit, total };
 };
-
