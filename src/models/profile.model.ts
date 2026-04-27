@@ -41,20 +41,20 @@ export const getAllProfiles = async (
     where.age_group = filters.age_group.toLowerCase();
   }
   if (filters.min_age !== undefined) {
-    where.age = { ...((where.age as any) || {}), gte: filters.min_age };
+    where.age = { ...(where.age || {}), gte: filters.min_age };
   }
   if (filters.max_age !== undefined) {
-    where.age = { ...((where.age as any) || {}), lte: filters.max_age };
+    where.age = { ...(where.age || {}), lte: filters.max_age };
   }
   if (filters.min_gender_probability !== undefined) {
     where.gender_probability = {
-      ...((where.gender_probability as any) || {}),
+      ...(where.gender_probability || {}),
       gte: filters.min_gender_probability,
     };
   }
   if (filters.min_country_probability !== undefined) {
     where.country_probability = {
-      ...((where.country_probability as any) || {}),
+      ...(where.country_probability || {}),
       gte: filters.min_country_probability,
     };
   }

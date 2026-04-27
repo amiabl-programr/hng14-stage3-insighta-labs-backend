@@ -154,8 +154,7 @@ export const parseNaturalLanguageQuery = (
   }
 
   if (Object.keys(filters).length === 0) {
-    console.log("Can't find any filters in the query:", query);
-    return null;
+    throw new Error('No filters found in the query');
   }
 
   return filters;

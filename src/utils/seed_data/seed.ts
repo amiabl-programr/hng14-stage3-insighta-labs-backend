@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma.js';
 import { uuidv7 } from 'uuidv7';
 import rawData from './seed_profiles.json' with { type: 'json' };
+import { AppError } from '../AppError.js';
 
 interface SeedProfile {
   name: string;
@@ -17,8 +18,9 @@ const profiles = rawData.profiles as SeedProfile[];
 
 async function main() {
   try {
-    console.log('Starting seed...');
-    console.log(`Found ${profiles.length} profiles to seed`);
+    if (profiles.length === 0) {
+      throw new Error('No profiles found in the seed data');
+    }
 
     // Single query to get all existing names
     const existing = await prisma.profile.findMany({ select: { name: true } });
@@ -27,8 +29,7 @@ async function main() {
     const toCreate = profiles.filter((p) => !existingNames.has(p.name));
     const skippedCount = profiles.length - toCreate.length;
 
-    console.log(`Existing profiles in database: ${existingNames.size}`);
-    console.log(`To create: ${toCreate.length}, To skip: ${skippedCount}`);
+
 
     // Batch insert in chunks to avoid memory issues on large datasets
     const CHUNK_SIZE = 500;
@@ -46,17 +47,10 @@ async function main() {
       });
 
       createdCount += chunk.length;
-      console.log(
-        `Progress: ${Math.min(createdCount, toCreate.length)}/${toCreate.length}`,
-      );
     }
 
-    console.log(`\nSeed completed!`);
-    console.log(`Created: ${createdCount} profiles`);
-    console.log(`Skipped: ${skippedCount} profiles (already exist)`);
-    console.log(`Total in database: ${await prisma.profile.count()}`);
   } catch (error) {
-    console.error('Seed failed:', error);
+    throw new Error;
     process.exit(1);
   } finally {
     await prisma.$disconnect();

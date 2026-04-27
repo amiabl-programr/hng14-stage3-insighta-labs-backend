@@ -32,7 +32,6 @@ export async function saveUser(user: GithubUserData) {
 
     return savedUser;
   } catch (err) {
-    console.error(err);
     throw new Error('GitHub auth failed');
   }
 }

@@ -39,7 +39,6 @@ export async function createOrUpdateUser(userData: GithubUserData) {
     const user = await saveUser(userData);
     return user;
   } catch (err: unknown) {
-    console.log((err as Error).message);
-    throw err;
+    throw new Error('GitHub auth failed');
   }
 }
