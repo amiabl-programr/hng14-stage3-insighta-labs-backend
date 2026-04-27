@@ -7,7 +7,10 @@
     "build": "prisma generate && tsc",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
-    "lint": "eslint 'src/**/*.ts'",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "prisma:generate": "prisma generate",
@@ -32,12 +35,16 @@
     "uuidv7": "^0.6.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.6.0",
     "@types/pg": "^8.20.0",
     "@types/supertest": "^7.2.0",
     "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^17.5.0",
     "jest": "^30.3.0",
     "nodemon": "^3.1.14",
     "prettier": "^3.8.2",
@@ -46,6 +53,7 @@
     "ts-jest": "^29.4.9",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.59.0"
   }
 }
