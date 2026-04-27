@@ -36,8 +36,8 @@ export const getProfiles = catchAsync(async (req: Request, res: Response) => {
     limit = '10',
   } = req.query;
 
-  let pageNum = parseInt(page as string, 10);
-  let limitNum = parseInt(limit as string, 10);
+  const pageNum = parseInt(page as string, 10);
+  const limitNum = parseInt(limit as string, 10);
 
   if (isNaN(pageNum) || pageNum < 1) {
     throw new AppError('Invalid query parameters', 422);

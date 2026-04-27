@@ -16,11 +16,14 @@ export default tseslint.config(
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_' },
+      ],
       'no-console': 'warn',
     },
   },
   {
     ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'jest.config.js'],
-  }
+  },
 );
