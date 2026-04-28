@@ -8,10 +8,11 @@ describe('GET /api/profiles', () => {
     const response = await request(app)
       .get('/api/profiles?search=victor')
       .expect(200);
+
     expect(response.body.status).toBe('success');
   });
 
   afterAll(async () => {
     await prisma.$disconnect();
-  }, 40000);
+  });
 });
