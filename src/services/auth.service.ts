@@ -32,13 +32,12 @@ export interface GithubUserData {
   username: string;
   email: string | null;
   avatar_url: string;
+  access_token?: string;
+  refresh_token?: string;
+  expires_at?: Date;
 }
 
 export async function createOrUpdateUser(userData: GithubUserData) {
-  try {
-    const user = await saveUser(userData);
-    return user;
-  } catch {
-    throw new Error('GitHub auth failed');
-  }
+  const user = await saveUser(userData);
+  return user;
 }

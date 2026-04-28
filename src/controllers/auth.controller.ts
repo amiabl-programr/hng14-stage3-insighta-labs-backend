@@ -28,6 +28,9 @@ export const handleCallbackController = catchAsync(
       username: userDataFromGithub.login,
       email: userDataFromGithub.email,
       avatar_url: userDataFromGithub.avatar_url,
+      access_token: tokenResponse.access_token,
+      refresh_token: tokenResponse.refresh_token,
+      expires_at: tokenResponse.expires_at,
     };
 
     const createdUser = await createOrUpdateUser(userData);
