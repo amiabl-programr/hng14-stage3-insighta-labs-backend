@@ -38,10 +38,6 @@ export interface GithubUserData {
 }
 
 export async function createOrUpdateUser(userData: GithubUserData) {
-  try {
-    const user = await saveUser(userData);
-    return user;
-  } catch (error) {
-    throw error;
-  }
+  const user = await saveUser(userData);
+  return user;
 }

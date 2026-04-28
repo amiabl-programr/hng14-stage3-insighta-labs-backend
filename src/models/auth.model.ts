@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma.js';
 import { GithubUserData } from '../services/auth.service.js';
 
 export async function saveUser(user: GithubUserData) {
-  try {
+
     const githubId = Number(user.github_id);
 
     if (!githubId) {
@@ -73,8 +73,5 @@ export async function saveUser(user: GithubUserData) {
     });
 
     return newAccount.user;
-  } catch (error) {
-    //   console.error(err);
-    throw error;
-  }
+
 }
