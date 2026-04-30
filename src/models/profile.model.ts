@@ -1,6 +1,34 @@
 import { prisma } from '../lib/prisma.js';
 import { Profile } from '../generated/prisma/client.js';
 
+export interface CreateProfileData {
+  id: string;
+  name: string;
+  gender: string;
+  gender_probability: number;
+  sample_size: number;
+  age: number;
+  age_group: string;
+  country_id: string;
+  country_probability: number;
+  country_name: string;
+}
+export const findProfileByName = async (
+  name: string,
+): Promise<Profile | null> => {
+  return prisma.profile.findUnique({ where: { name } });
+};
+
+export const findProfileById = async (id: string): Promise<Profile | null> => {
+  return prisma.profile.findUnique({ where: { id } });
+};
+
+export const createProfile = async (
+  data: CreateProfileData,
+): Promise<Profile> => {
+  return prisma.profile.create({ data });
+};
+
 export interface ProfileFilters {
   gender?: string;
   country_id?: string;
@@ -77,4 +105,8 @@ export const getAllProfiles = async (
   ]);
 
   return { data, page: options.page, limit: options.limit, total };
+};
+
+export const deleteProfile = async (id: string): Promise<Profile> => {
+  return prisma.profile.delete({ where: { id } });
 };

@@ -1,9 +1,19 @@
 import {
   getAllProfiles,
+  findProfileByName,
+  createProfile,
+  findProfileById,
+  deleteProfile,
   ProfileFilters,
   QueryOptions,
   PaginatedResult,
 } from '../models/profile.model.js';
+import { fetchExternalData } from './external.service.js';
+import { Profile } from '../generated/prisma/client.js';
+import { uuidv7 } from 'uuidv7';
+import { getAgeGroup } from '../utils/classify.js';
+
+export const generateId = (): string => uuidv7();
 
 export const listProfiles = async (
   filters: ProfileFilters,
@@ -71,81 +81,6 @@ export const parseNaturalLanguageQuery = (
     }
   }
 
-  const countryMap: Record<string, string> = {
-    nigeria: 'NG',
-    nigerian: 'NG',
-    kenya: 'KE',
-    kenyan: 'KE',
-    ghana: 'GH',
-    ghanaian: 'GH',
-    uganda: 'UG',
-    ugandan: 'UG',
-    tanzania: 'TZ',
-    tanzanian: 'TZ',
-    benin: 'BJ',
-    beninese: 'BJ',
-    sudan: 'SD',
-    sudanese: 'SD',
-    egypt: 'EG',
-    egyptian: 'EG',
-    'south africa': 'ZA',
-    'south african': 'ZA',
-    ethiopia: 'ET',
-    ethiopian: 'ET',
-    cameroon: 'CM',
-    cameroonian: 'CM',
-    mozambique: 'MZ',
-    mozambican: 'MZ',
-    malawi: 'MW',
-    malawian: 'MW',
-    zimbabwe: 'ZW',
-    zimbabwean: 'ZW',
-    botswana: 'BW',
-    motswana: 'BW',
-    namibia: 'NA',
-    namibian: 'NA',
-    lesotho: 'LS',
-    basotho: 'LS',
-    eswatini: 'SZ',
-    swazi: 'SZ',
-    mauritius: 'MU',
-    mauritian: 'MU',
-    algeria: 'DZ',
-    algerian: 'DZ',
-    tunisia: 'TN',
-    tunisian: 'TN',
-    morocco: 'MA',
-    moroccan: 'MA',
-    liberia: 'LR',
-    liberian: 'LR',
-    'sierra leone': 'SL',
-    'sierra leonean': 'SL',
-    guinea: 'GN',
-    guinean: 'GN',
-    mali: 'ML',
-    malian: 'ML',
-    senegal: 'SN',
-    senegalese: 'SN',
-    mauritania: 'MR',
-    mauritanian: 'MR',
-    yemen: 'YE',
-    yemeni: 'YE',
-    congo: 'CD',
-    congolese: 'CD',
-    'united states': 'US',
-    usa: 'US',
-    american: 'US',
-    'united kingdom': 'GB',
-    uk: 'GB',
-    british: 'GB',
-    canada: 'CA',
-    canadian: 'CA',
-    australia: 'AU',
-    australian: 'AU',
-    angola: 'AO',
-    angolan: 'AO',
-  };
-
   for (const [country, code] of Object.entries(countryMap)) {
     if (changeQueryToLowerCase.includes(country)) {
       filters.country_id = code;
@@ -158,4 +93,116 @@ export const parseNaturalLanguageQuery = (
   }
 
   return filters;
+};
+
+export const createOrFetchProfile = async (
+  name: string,
+): Promise<{ profile: Profile; alreadyExists: boolean }> => {
+  const existing = await findProfileByName(name);
+  if (existing) {
+    return { profile: existing, alreadyExists: true };
+  }
+
+  const externalData = await fetchExternalData(name);
+
+  const profile = await createProfile({
+    id: generateId(),
+    name,
+    gender: externalData.gender,
+    gender_probability: externalData.gender_probability,
+    sample_size: externalData.sample_size,
+    age: externalData.age,
+    age_group: getAgeGroup(externalData.age),
+    country_id: externalData.country_id,
+    country_name: externalData.country_name,
+    country_probability: externalData.country_probability,
+  });
+
+  return { profile, alreadyExists: false };
+};
+
+export const removeProfile = async (id: string): Promise<boolean> => {
+  const profile = await findProfileById(id);
+  if (!profile) return false;
+  await deleteProfile(id);
+  return true;
+};
+
+export const getProfileById = async (id: string): Promise<Profile | null> => {
+  return findProfileById(id);
+};
+
+export const countryMap: Record<string, string> = {
+  nigeria: 'NG',
+  nigerian: 'NG',
+  kenya: 'KE',
+  kenyan: 'KE',
+  ghana: 'GH',
+  ghanaian: 'GH',
+  uganda: 'UG',
+  ugandan: 'UG',
+  tanzania: 'TZ',
+  tanzanian: 'TZ',
+  benin: 'BJ',
+  beninese: 'BJ',
+  sudan: 'SD',
+  sudanese: 'SD',
+  egypt: 'EG',
+  egyptian: 'EG',
+  'south africa': 'ZA',
+  'south african': 'ZA',
+  ethiopia: 'ET',
+  ethiopian: 'ET',
+  cameroon: 'CM',
+  cameroonian: 'CM',
+  mozambique: 'MZ',
+  mozambican: 'MZ',
+  malawi: 'MW',
+  malawian: 'MW',
+  zimbabwe: 'ZW',
+  zimbabwean: 'ZW',
+  botswana: 'BW',
+  motswana: 'BW',
+  namibia: 'NA',
+  namibian: 'NA',
+  lesotho: 'LS',
+  basotho: 'LS',
+  eswatini: 'SZ',
+  swazi: 'SZ',
+  mauritius: 'MU',
+  mauritian: 'MU',
+  algeria: 'DZ',
+  algerian: 'DZ',
+  tunisia: 'TN',
+  tunisian: 'TN',
+  morocco: 'MA',
+  moroccan: 'MA',
+  liberia: 'LR',
+  liberian: 'LR',
+  'sierra leone': 'SL',
+  'sierra leonean': 'SL',
+  guinea: 'GN',
+  guinean: 'GN',
+  mali: 'ML',
+  malian: 'ML',
+  senegal: 'SN',
+  senegalese: 'SN',
+  mauritania: 'MR',
+  mauritanian: 'MR',
+  yemen: 'YE',
+  yemeni: 'YE',
+  congo: 'CD',
+  congolese: 'CD',
+  'united states': 'US',
+  usa: 'US',
+  american: 'US',
+  'united kingdom': 'GB',
+  uk: 'GB',
+  british: 'GB',
+  canada: 'CA',
+  canadian: 'CA',
+  australia: 'AU',
+  australian: 'AU',
+  angola: 'AO',
+  angolan: 'AO',
 };
