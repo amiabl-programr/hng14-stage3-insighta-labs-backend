@@ -18,6 +18,7 @@ model Profile {
   gender              String
   gender_probability  Float
   age                 Int
+  sample_size         Int?
   age_group           String
   country_id          String
   country_name        String
