@@ -7,6 +7,7 @@ interface SeedProfile {
   gender: string;
   gender_probability: number;
   age: number;
+  sample_size?: number;
   age_group: string;
   country_id: string;
   country_name: string;

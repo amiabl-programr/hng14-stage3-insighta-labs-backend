@@ -1,7 +1,10 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import {
   listProfiles,
   parseNaturalLanguageQuery,
+  createOrFetchProfile,
+  getProfileById,
+  removeProfile,
 } from '../services/profile.service.js';
 import { catchAsync } from '../utils/catchAsync.js';
 import { AppError } from '../utils/AppError.js';
@@ -159,3 +162,99 @@ export const searchProfiles = catchAsync(
     );
   },
 );
+
+export const createProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { name } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+      return res
+        .status(400)
+        .json({ status: 'error', message: 'Name is required' });
+    }
+
+    if (typeof name !== 'string') {
+      return res
+        .status(422)
+        .json({ status: 'error', message: 'Name must be a string' });
+    }
+
+    const { profile, alreadyExists } = await createOrFetchProfile(
+      name.trim().toLowerCase(),
+    );
+
+    if (alreadyExists) {
+      return res.status(200).json({
+        status: 'success',
+        message: 'Profile already exists',
+        data: formatProfileFull(profile),
+      });
+    }
+
+    return res.status(201).json({
+      status: 'success',
+      data: formatProfileFull(profile),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const id: string = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
+
+    if (!id) {
+      return res
+        .status(400)
+        .json({ status: 'error', message: 'Profile ID is required' });
+    }
+
+    const profile = await getProfileById(id);
+
+    if (!profile) {
+      return res
+        .status(404)
+        .json({ status: 'error', message: 'Profile not found' });
+    }
+
+    return res
+      .status(200)
+      .json({ status: 'success', data: formatProfileFull(profile) });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const id: string = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
+    const deleted = await removeProfile(id);
+
+    if (!deleted) {
+      return res
+        .status(404)
+        .json({ status: 'error', message: 'Profile not found' });
+    }
+
+    return res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+};
