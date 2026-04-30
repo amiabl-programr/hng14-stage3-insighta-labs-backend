@@ -210,7 +210,9 @@ export const getProfile = async (
   next: NextFunction,
 ) => {
   try {
-    const id: any = req.params.id;
+    const id: string = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
 
     if (!id) {
       return res
@@ -240,7 +242,9 @@ export const deleteProfile = async (
   next: NextFunction,
 ) => {
   try {
-    const { id }: any = req.params;
+    const id: string = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
     const deleted = await removeProfile(id);
 
     if (!deleted) {
