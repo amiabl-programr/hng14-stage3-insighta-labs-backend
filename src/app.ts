@@ -3,6 +3,7 @@ import profilesRouter from './routes/profile.routes.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import authRouter from './routes/auth.route.js';
 import { AppError } from './utils/AppError.js';
+import { httpLogger } from './config/logger.js';
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+app.use(httpLogger);
 
 app.use('/api/profiles', profilesRouter);
 app.use('/auth', authRouter);
