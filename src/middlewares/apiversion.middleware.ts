@@ -8,7 +8,7 @@ export function requireApiVersion(
   if (req.headers['x-api-version'] !== '1') {
     return res
       .status(400)
-      .json({ error: 'Missing or invalid X-API-Version header. Expected: 1' });
+      .json({ status: 'error', message: 'API version header required' });
   }
   next();
 }

@@ -24,6 +24,32 @@ const formatProfileFull = (profile: Profile) => ({
   created_at: profile.created_at,
 });
 
+function buildLinks(
+  req: Request,
+  page: number,
+  limit: number,
+  totalPages: number,
+): { self: string; next: string | null; prev: string | null } {
+  const baseUrl = req.baseUrl + req.path;
+  const qs = new URLSearchParams(req.query as Record<string, string>);
+  qs.set('page', String(page));
+  qs.set('limit', String(limit));
+
+  const self = `${baseUrl}?${qs.toString()}`;
+
+  const prevQs = new URLSearchParams(req.query as Record<string, string>);
+  prevQs.set('page', String(page - 1));
+  prevQs.set('limit', String(limit));
+  const prev = page > 1 ? `${baseUrl}?${prevQs.toString()}` : null;
+
+  const nextQs = new URLSearchParams(req.query as Record<string, string>);
+  nextQs.set('page', String(page + 1));
+  nextQs.set('limit', String(limit));
+  const next = page < totalPages ? `${baseUrl}?${nextQs.toString()}` : null;
+
+  return { self, next, prev };
+}
+
 export const getProfiles = catchAsync(async (req: Request, res: Response) => {
   const {
     gender,
@@ -50,7 +76,6 @@ export const getProfiles = catchAsync(async (req: Request, res: Response) => {
     throw new AppError('Invalid query parameters', 422);
   }
 
-  // Parse numeric filters
   const minAge = min_age ? parseInt(min_age as string, 10) : undefined;
   const maxAge = max_age ? parseInt(max_age as string, 10) : undefined;
   const minGenderProb = min_gender_probability
@@ -71,7 +96,6 @@ export const getProfiles = catchAsync(async (req: Request, res: Response) => {
     throw new AppError('Invalid query parameters', 422);
   }
 
-  // Validate sort parameters
   const validSortFields = ['age', 'created_at', 'gender_probability'];
   const validOrders = ['asc', 'desc'];
 
@@ -105,6 +129,8 @@ export const getProfiles = catchAsync(async (req: Request, res: Response) => {
     },
   );
 
+  const totalPages = Math.ceil(result.total / result.limit);
+
   return sendSuccessResponse(
     res,
     200,
@@ -114,6 +140,8 @@ export const getProfiles = catchAsync(async (req: Request, res: Response) => {
       page: result.page,
       limit: result.limit,
       total: result.total,
+      total_pages: totalPages,
+      links: buildLinks(req, result.page, result.limit, totalPages),
     },
   );
 });
@@ -122,7 +150,6 @@ export const searchProfiles = catchAsync(
   async (req: Request, res: Response) => {
     const { q, page = '1', limit = '10' } = req.query;
 
-    // Validate query parameter
     if (!q || typeof q !== 'string' || q.trim() === '') {
       throw new AppError('Query parameter q is required', 400);
     }
@@ -149,6 +176,8 @@ export const searchProfiles = catchAsync(
       limit: limitNum,
     });
 
+    const totalPages = Math.ceil(result.total / result.limit);
+
     return sendSuccessResponse(
       res,
       200,
@@ -158,6 +187,8 @@ export const searchProfiles = catchAsync(
         page: result.page,
         limit: result.limit,
         total: result.total,
+        total_pages: totalPages,
+        links: buildLinks(req, result.page, result.limit, totalPages),
       },
     );
   },
@@ -203,6 +234,102 @@ export const createProfile = async (
     next(err);
   }
 };
+
+export const exportProfiles = catchAsync(
+  async (req: Request, res: Response) => {
+    const {
+      gender,
+      country_id,
+      age_group,
+      min_age,
+      max_age,
+      min_gender_probability,
+      min_country_probability,
+      sort_by,
+      order,
+      page = '1',
+      limit = '1000',
+    } = req.query;
+
+    const pageNum = parseInt(page as string, 10) || 1;
+    const limitNum = Math.min(parseInt(limit as string, 10) || 1000, 5000);
+
+    const minAge = min_age ? parseInt(min_age as string, 10) : undefined;
+    const maxAge = max_age ? parseInt(max_age as string, 10) : undefined;
+    const minGenderProb = min_gender_probability
+      ? parseFloat(min_gender_probability as string)
+      : undefined;
+    const minCountryProb = min_country_probability
+      ? parseFloat(min_country_probability as string)
+      : undefined;
+
+    const validSortFields = ['age', 'created_at', 'gender_probability'];
+    const validOrders = ['asc', 'desc'];
+
+    if (sort_by && !validSortFields.includes(sort_by as string)) {
+      throw new AppError('Invalid query parameters', 422);
+    }
+    if (order && !validOrders.includes(order as string)) {
+      throw new AppError('Invalid query parameters', 422);
+    }
+
+    const result = await listProfiles(
+      {
+        gender: gender as string | undefined,
+        country_id: country_id as string | undefined,
+        age_group: age_group as string | undefined,
+        min_age: minAge,
+        max_age: maxAge,
+        min_gender_probability: minGenderProb,
+        min_country_probability: minCountryProb,
+      },
+      {
+        page: pageNum,
+        limit: limitNum,
+        sort_by: sort_by as
+          | 'age'
+          | 'created_at'
+          | 'gender_probability'
+          | undefined,
+        order: order as 'asc' | 'desc' | undefined,
+      },
+    );
+
+    const header =
+      'id,name,gender,gender_probability,age,age_group,country_id,country_name,country_probability,created_at\n';
+    const rows = result.data
+      .map((p: unknown) => {
+        const profile = p as Profile;
+        const csv = [
+          profile.id,
+          `"${profile.name}"`,
+          profile.gender,
+          profile.gender_probability,
+          profile.age,
+          profile.age_group,
+          profile.country_id,
+          `"${profile.country_name}"`,
+          profile.country_probability,
+          profile.created_at.toISOString(),
+        ];
+        return csv.join(',');
+      })
+      .join('\n');
+
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[:.]/g, '-')
+      .slice(0, 19);
+    const csvContent = header + rows;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="profiles_${timestamp}.csv"`,
+    );
+    return res.send(csvContent);
+  },
+);
 
 export const getProfile = async (
   req: Request,
