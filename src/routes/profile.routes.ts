@@ -6,13 +6,19 @@ import {
   deleteProfile,
   searchProfiles,
 } from '../controllers/profile.controller.js';
+import { authenticate } from '../middlewares/auth.middleware.js';
+import { requireRole } from '../middlewares/authorize.middleware.js';
+import { requireApiVersion } from '../middlewares/apiversion.middleware.js';
 
 const router = Router();
 
+router.use(requireApiVersion);
+router.use(authenticate);
+
 router.get('/search', searchProfiles);
 router.get('/', getProfiles);
-router.post('/', createProfile);
+router.post('/', requireRole('ADMIN'), createProfile);
 router.get('/:id', getProfile);
-router.delete('/:id', deleteProfile);
+router.delete('/:id', requireRole('ADMIN'), deleteProfile);
 
 export default router;

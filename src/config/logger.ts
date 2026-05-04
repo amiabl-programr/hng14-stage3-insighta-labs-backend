@@ -1,7 +1,5 @@
 import morgan from 'morgan';
 import winston from 'winston';
-import fs from 'fs';
-import path from 'path';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -10,14 +8,19 @@ export const logger = winston.createLogger({
   level: isProduction ? 'info' : 'debug',
   format: winston.format.combine(
     winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.metadata({ fillExcept: ['message', 'level', 'timestamp'] }),
     isProduction
       ? winston.format.json()
       : winston.format.combine(
           winston.format.colorize(),
-          winston.format.printf(
-            ({ timestamp, level, message }) =>
-              `${timestamp} [${level}]: ${message}`,
-          ),
+          winston.format.printf(({ timestamp, level, message, metadata }) => {
+            const meta =
+              metadata && Object.keys(metadata as object).length
+                ? ' ' + JSON.stringify(metadata)
+                : '';
+            return `${timestamp} [${level}]: ${message}${meta}`;
+          }),
         ),
   ),
   transports: [
@@ -29,10 +32,10 @@ export const logger = winston.createLogger({
 });
 
 // ─── Morgan (HTTP request logs) ───────────────────────────────────────────────
-const stream = isProduction
-  ? fs.createWriteStream(path.join(process.cwd(), 'logs/access.log'), {
-      flags: 'a',
-    })
-  : process.stdout;
-
-export const httpLogger = morgan(isProduction ? 'combined' : 'dev', { stream });
+export const httpLogger = morgan(isProduction ? 'combined' : 'dev', {
+  stream: {
+    write: (message: string) => {
+      logger.debug('[http] ' + message.trim());
+    },
+  },
+});

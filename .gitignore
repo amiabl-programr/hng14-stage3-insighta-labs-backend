@@ -3,3 +3,4 @@
 .env
 /src/generated
 req.md
+logs/
