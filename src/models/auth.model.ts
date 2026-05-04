@@ -1,8 +1,10 @@
 import { prisma } from '../lib/prisma.js';
 import { GithubUserData } from '../services/auth.service.js';
+import { logger } from '../config/logger.js';
 
 export async function saveUser(user: GithubUserData) {
   const githubId = Number(user.github_id);
+  logger.info('github ID', githubId);
 
   if (!githubId) {
     throw new Error('Invalid GitHub ID');
