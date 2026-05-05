@@ -6,6 +6,10 @@ import { errorHandler } from './middlewares/error.middleware.js';
 import authRouter from './routes/auth.route.js';
 import { AppError } from './utils/AppError.js';
 import { httpLogger } from './config/logger.js';
+import {
+  authLimiter,
+  apiLimiter,
+} from './middlewares/rateLimiter.middleware.js';
 
 const app = express();
 
@@ -34,6 +38,10 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(httpLogger);
 
+app.use('/auth', authLimiter);
+app.use('/api/profiles', apiLimiter);
+
+// Routes
 app.use('/auth', authRouter);
 app.use(doubleCsrfProtection);
 app.use('/api/profiles', profilesRouter);

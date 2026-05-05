@@ -1,5 +1,42 @@
 import axios from 'axios';
-import { countryMap } from './profile.service.js';
+
+const countryCodeToName: Record<string, string> = {
+  NG: 'Nigeria',
+  KE: 'Kenya',
+  GH: 'Ghana',
+  UG: 'Uganda',
+  TZ: 'Tanzania',
+  BJ: 'Benin',
+  SD: 'Sudan',
+  EG: 'Egypt',
+  ZA: 'South Africa',
+  ET: 'Ethiopia',
+  CM: 'Cameroon',
+  MZ: 'Mozambique',
+  MW: 'Malawi',
+  ZW: 'Zimbabwe',
+  BW: 'Botswana',
+  NA: 'Namibia',
+  LS: 'Lesotho',
+  SZ: 'Eswatini',
+  MU: 'Mauritius',
+  DZ: 'Algeria',
+  TN: 'Tunisia',
+  MA: 'Morocco',
+  LR: 'Liberia',
+  SL: 'Sierra Leone',
+  GN: 'Guinea',
+  ML: 'Mali',
+  SN: 'Senegal',
+  MR: 'Mauritania',
+  YE: 'Yemen',
+  CD: 'Congo',
+  US: 'United States',
+  GB: 'United Kingdom',
+  CA: 'Canada',
+  AU: 'Australia',
+  AO: 'Angola',
+};
 
 interface GenderizeResponse {
   gender: string | null;
@@ -66,8 +103,8 @@ export const fetchExternalData = async (
   );
 
   let country_name = '';
-  if (countryMap[topCountry.country_id]) {
-    country_name = countryMap[topCountry.country_id];
+  if (countryCodeToName[topCountry.country_id]) {
+    country_name = countryCodeToName[topCountry.country_id];
   }
 
   return {
