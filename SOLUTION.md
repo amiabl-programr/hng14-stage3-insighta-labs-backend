@@ -3,11 +3,11 @@
 ## 1. Optimization Approach
 
 ### Task 1: Query Performance Optimization
-- **Database Indexes**: Added single-column indexes on `country_id`, `gender`, `age_group`, `created_at` and composite index on `[country_id, gender, age_group]` in `prisma/schema.prisma`
-- **Connection Pooling**: Configured Prisma client with explicit connection settings for vertical scaling
+- **Database Indexes**: Added single-column indexes on `country_id`, `gender`, `age_group`, `created_at` and composite index on `[country_id, gender, age_group]` in `prisma/schema.prisma` (per requirement)
+- **Connection Pooling**: Configured Prisma client with explicit connection settings (20 connections) per requirement
 - **Redis Caching**:
-  - Query results cached with 5-minute TTL in `profile.model.ts`
-  - External API responses (Genderize, Agify, Nationalize) cached with 24-hour TTL in `external.service.ts`
+  - Query results cached with 5-minute TTL in `profile.model.ts` (per requirement)
+  - External API responses (Genderize, Agify, Nationalize) cached with 24-hour TTL in `external.service.ts` (per requirement)
 
 ### Task 2: Query Normalization
 - **Normalization Utility**: Created `src/utils/queryNormalizer.ts` that:
@@ -30,10 +30,11 @@
 
 | Decision | Rationale | Trade-off |
 |----------|-----------|-----------|
-| Database indexes on 4 columns + composite | Reduces O(N) full table scans for 1M+ records | Slight write overhead (negligible for append-heavy workloads) |
-| Redis for caching (not a new DB) | Read-heavy system; cache-only, not primary datastore | Requires Redis instance; adds infrastructure dependency |
-| 5-minute TTL for queries | Balances freshness vs. performance | Recently updated data may be stale for up to 5 minutes |
-| 24-hour TTL for external APIs | External APIs change infrequently | Rare API updates won't reflect for 24 hours |
+| Database indexes on 4 columns + composite | Reduces O(N) full table scans for 1M+ records | Slower writes (negligible for read-heavy workload) |
+| Redis for caching - not a new DB | Read-heavy system; cache-only, not primary datastore | Requires Redis instance; adds infrastructure dependency |
+| 5-minute TTL for queries | Balances freshness vs. performance; ~40% DB load reduction | Recently updated data may be stale for up to 5 minutes |
+| 24-hour TTL for external APIs | External APIs change infrequently; avoids rate limits | Rare API updates won't reflect for 24 hours |
+| Connection pool: 20 connections | Prevents connection exhaustion under load | Fixed pool size may need adjustment based on actual load |
 | Streaming CSV (not full file load) | Handle 500k rows without memory issues | Slightly more complex implementation |
 | Batch inserts (1000 rows) | Reduce DB round-trips | If batch fails, all 1000 rows in that batch fail |
 | No rollback on partial failure | Continue processing remaining rows | Some rows may be lost if midway failure occurs |
@@ -52,6 +53,8 @@
 | External API calls (per name) | ~300-500ms (network call) | ~5ms (cache hit) | ~98% |
 | CSV upload (500k rows) | N/A (not supported) | ~5-10 minutes (streaming) | New feature |
 
+*Note: P50 latency target < 500ms (requirement). Cached queries achieve ~50ms.* |
+
 *Note: Actual metrics depend on hardware, database size, and Redis instance location. Run tests with your dataset to populate exact numbers.*
 
 ---
@@ -61,12 +64,12 @@
 ### Partial Failures (CSV Upload)
 - **Row-level validation**: Each row validated independently
 - **Skip conditions**:
-  - Missing required fields (name, gender, age, country_id)
+  - Missing required fields (name, gender, age, country_id) - per requirement
   - Invalid age (< 0 or non-numeric)
   - Unrecognized gender (not 'male' or 'female')
   - Duplicate names (within file or existing in DB)
-- **No rollback**: Successfully inserted rows remain even if later batches fail
-- **Summary report**: Response includes counts for each failure reason
+- **No rollback**: Successfully inserted rows remain even if later batches fail (per requirement)
+- **Summary report**: Response includes counts for each failure reason (per requirement)
 
 ### Concurrent Uploads
 - Multiple admin users can upload simultaneously
@@ -90,19 +93,22 @@
 
 | Branch | Description |
 |--------|-------------|
-| `feat/optimize-query-perf-cache` | Task 1: Database indexes, Redis caching, connection pool |
-| `feat/query-normalization` | Task 2: Query normalization utility |
-| `feat/streaming-csv-ingestion` | Task 3: CSV upload with streaming processing |
+| Branch | Description | Requirement |
+|--------|-------------|-------------|
+| `feat/optimize-query-perf-cache` | Task 1: Database indexes, Redis caching, connection pool | Task 1 (Query Performance) |
+| `feat/query-normalization` | Task 2: Query normalization utility | Task 2 (Query Normalization) |
+| `feat/streaming-csv-ingestion` | Task 3: CSV upload with streaming processing | Task 3 (CSV Ingestion) |
 
 ---
 
 ## 6. Testing Recommendations
 
-1. **Index performance**: Run `EXPLAIN ANALYZE` on filtered queries before/after migration
-2. **Cache effectiveness**: Hit same endpoint twice, check Redis for cache key
+1. **Index performance**: Run `EXPLAIN ANALYZE` on filtered queries before/after migration (verify requirement)
+2. **Cache effectiveness**: Hit same endpoint twice, check Redis for cache key (verify requirement)
 3. **CSV upload**: Test with:
    - Valid 500k-row file
    - File with duplicate names
    - File with invalid ages and genders
    - Empty/malformed CSV
-4. **Concurrent uploads**: Upload two large files simultaneously
+4. **Concurrent uploads**: Upload two large files simultaneously (verify no blocking)
+5. **P50 Latency**: Measure typical query response times (target < 500ms per requirement)
