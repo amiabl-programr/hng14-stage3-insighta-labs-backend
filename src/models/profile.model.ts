@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import { Profile } from '../generated/prisma/client.js';
+import { getCache, setCache } from '../services/cache.service.js';
 
 export interface CreateProfileData {
   id: string;
@@ -57,6 +58,12 @@ export const getAllProfiles = async (
   filters: ProfileFilters,
   options: QueryOptions,
 ): Promise<PaginatedResult> => {
+  const cacheKey = `profiles:${JSON.stringify({ filters, options })}`;
+  const cached = await getCache(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
   const where: Record<string, unknown> = {};
 
   if (filters.gender) {
@@ -104,7 +111,9 @@ export const getAllProfiles = async (
     prisma.profile.count({ where }),
   ]);
 
-  return { data, page: options.page, limit: options.limit, total };
+  const result = { data, page: options.page, limit: options.limit, total };
+  await setCache(cacheKey, JSON.stringify(result), 300);
+  return result;
 };
 
 export const deleteProfile = async (id: string): Promise<Profile> => {

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getCache, setCache } from './cache.service.js';
 
 const countryCodeToName: Record<string, string> = {
   NG: 'Nigeria',
@@ -66,6 +67,12 @@ export interface ExternalData {
 export const fetchExternalData = async (
   name: string,
 ): Promise<ExternalData> => {
+  const cacheKey = `external:${name.toLowerCase()}`;
+  const cached = await getCache(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
   const [genderRes, agifyRes, nationalizeRes] = await Promise.all([
     axios.get<GenderizeResponse>(
       `https://api.genderize.io?name=${encodeURIComponent(name)}`,
@@ -84,17 +91,17 @@ export const fetchExternalData = async (
     count: sample_size,
   } = genderRes.data;
   if (!gender || sample_size === 0) {
-    throw { statusCode: 502, api: 'Genderize' };
+    throw new Error('Genderize API returned no data');
   }
 
   const { age } = agifyRes.data;
   if (age === null || age === undefined) {
-    throw { statusCode: 502, api: 'Agify' };
+    throw new Error('Agify API returned no data');
   }
 
   const { country } = nationalizeRes.data;
   if (!country || country.length === 0) {
-    throw { statusCode: 502, api: 'Nationalize' };
+    throw new Error('Nationalize API returned no data');
   }
 
   // highest probability country
@@ -107,7 +114,7 @@ export const fetchExternalData = async (
     country_name = countryCodeToName[topCountry.country_id];
   }
 
-  return {
+  const result = {
     gender,
     gender_probability,
     sample_size,
@@ -116,4 +123,7 @@ export const fetchExternalData = async (
     country_probability: topCountry.probability,
     country_name,
   };
+
+  await setCache(cacheKey, JSON.stringify(result), 86400);
+  return result;
 };
