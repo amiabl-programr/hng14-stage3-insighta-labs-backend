@@ -11,6 +11,7 @@ Backend API for the Insighta Labs platform — a unified system powering a CLI t
 - [Token Handling Approach](#token-handling-approach)
 - [Role Enforcement Logic](#role-enforcement-logic)
 - [Natural Language Parsing](#natural-language-parsing)
+- [Stage 4B Optimizations](#stage-4b-optimizations)
 - [API Endpoints](#api-endpoints)
 - [Environment Variables](#environment-variables)
 - [Getting Started](#getting-started)
@@ -43,15 +44,42 @@ Backend API for the Insighta Labs platform — a unified system powering a CLI t
               │  │ GitHub     │  │ Auth + Role + Version    │  │
               │  │ OAuth/PKCE │  │ Middleware Stack         │  │
               │  └────────────┘  └──────────────────────────┘  │
-              └────────────────────────┬────────────────────────┘
-                                       │
-                              ┌────────▼────────┐
-                              │  PostgreSQL      │
-                              │  (via Prisma)    │
-                              │  Users, Accounts │
-                              │  Profiles        │
-                              └─────────────────┘
-```
+               └────────────────────────┬────────────────────────┘
+                                        │
+                               ┌────────▼────────┐
+                               │  PostgreSQL      │
+                               │  (via Prisma)    │
+                               │  Users, Accounts │
+                               │  Profiles        │
+                               └─────────────────┘
+                                        │
+                               ┌────────▼────────┐
+                               │  Redis Cache    │
+                               │  Query results  │
+                               │  External APIs  │
+                               └─────────────────┘
+ ```
+
+### Stage 4B Optimizations
+
+The backend implements three optimizations for handling 1M+ records and high query loads:
+
+#### 1. Query Performance Optimization
+- **Database Indexes**: Single-column (`country_id`, `gender`, `age_group`, `created_at`) and composite (`[country_id, gender, age_group]`) indexes
+- **Redis Caching**: Query results cached (5min TTL), external API responses cached (24hr TTL)
+- **Target**: P50 latency < 500ms, ~40% DB load reduction
+
+#### 2. Query Normalization
+- **Deterministic Cache Keys**: Same-intent queries produce identical cache keys
+- **Normalization Rules**: Sort keys alphabetically, standardize values (gender→lowercase, country_id→uppercase), remove undefined/null
+- **Utility**: `src/utils/queryNormalizer.ts`
+
+#### 3. CSV Data Ingestion
+- **Streaming Upload**: `POST /api/profiles/upload` (admin only)
+- **Batch Processing**: 1000 rows/batch using `Prisma.createMany`
+- **Validation**: Skip rows with missing fields, invalid age, unrecognized gender, duplicate names
+- **Partial Failure Support**: No rollback, returns summary with `total_rows`, `inserted`, `skipped`, `reasons`
+- **Memory Efficient**: Streaming with `fast-csv`, no full file in memory
 
 The system follows a three-tier architecture:
 1. **Backend** — Express + TypeScript + Prisma + PostgreSQL
@@ -202,6 +230,25 @@ The parser uses regex pattern matching to extract structured filter parameters f
 | `GET` | `/api/profiles/:id` | Get single profile by ID | Authenticated |
 | `POST` | `/api/profiles` | Create profile (calls external APIs) | `ADMIN` |
 | `DELETE` | `/api/profiles/:id` | Delete profile | `ADMIN` |
+| `POST` | `/api/profiles/upload` | Upload CSV file (max 500k rows) | `ADMIN` |
+
+### CSV Upload Response Format
+
+```json
+{
+  "status": "success",
+  "data": {
+    "total_rows": 50000,
+    "inserted": 48231,
+    "skipped": 1769,
+    "reasons": {
+      "duplicate_name": 1203,
+      "invalid_age": 312,
+      "missing_fields": 254
+    }
+  }
+}
+```
 
 ### Query Parameters
 
@@ -260,6 +307,9 @@ GITHUB_REDIRECT_URI=http://localhost:3000/auth/github/callback
 # JWT Secrets (use strong random strings)
 JWT_ACCESS_SECRET=your_access_secret_here
 JWT_REFRESH_SECRET=your_refresh_secret_here
+
+# Redis Cache
+REDIS_URL=redis://localhost:6379
 
 # CSRF Protection
 CSRF_SECRET=your_csrf_secret_here
@@ -391,14 +441,21 @@ src/
 │   └── profile.routes.ts         # /api/profiles/* routes
 ├── services/
 │   ├── auth.service.ts           # OAuth, PKCE, device flow, state encoding
+│   ├── cache.service.ts          # Redis client + get/set/delete operations
+│   ├── external.service.ts       # Genderize, Agify, Nationalize API clients
 │   └── token.service.ts          # JWT sign/verify
 ├── types/
 │   └── express.d.ts              # Express Request.user augmentation
 ├── utils/
 │   ├── AppError.ts               # Custom error class
 │   ├── catchAsync.ts             # Async error wrapper
-│   ├── externalApi.ts            # External API clients
+│   ├── classify.ts               # Age group classification
+│   ├── queryNormalizer.ts        # Deterministic query normalization
 │   └── responseHandler.ts        # Standardized response helpers
+├── controllers/
+│   └── csvupload.controller.ts   # CSV streaming upload handler
+├── middlewares/
+│   └── upload.middleware.ts      # Multer config for CSV uploads
 ├── app.ts                        # Express app + middleware pipeline
 └── server.ts                     # HTTP server entry point
 ```
