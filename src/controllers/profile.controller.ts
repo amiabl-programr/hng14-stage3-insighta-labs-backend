@@ -239,7 +239,10 @@ export const exportProfiles = catchAsync(
   async (req: Request, res: Response) => {
     const format = req.query.format as string;
     if (!format || format !== 'csv') {
-      throw new AppError('Invalid format. Only CSV export is supported. Use ?format=csv', 400);
+      throw new AppError(
+        'Invalid format. Only CSV export is supported. Use ?format=csv',
+        400,
+      );
     }
 
     const {
