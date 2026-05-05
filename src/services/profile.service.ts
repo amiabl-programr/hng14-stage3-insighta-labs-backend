@@ -11,7 +11,7 @@ import {
 import { fetchExternalData } from './external.service.js';
 import { Profile } from '../generated/prisma/client.js';
 import { uuidv7 } from 'uuidv7';
-import { getAgeGroup } from '../utils/classify.js';
+import { classifyAgeGroup } from '../utils/classify.js';
 
 export const generateId = (): string => uuidv7();
 
@@ -112,7 +112,7 @@ export const createOrFetchProfile = async (
     gender_probability: externalData.gender_probability,
     sample_size: externalData.sample_size,
     age: externalData.age,
-    age_group: getAgeGroup(externalData.age),
+    age_group: classifyAgeGroup(externalData.age),
     country_id: externalData.country_id,
     country_name: externalData.country_name,
     country_probability: externalData.country_probability,

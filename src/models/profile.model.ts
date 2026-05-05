@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import { Profile } from '../generated/prisma/client.js';
 import { getCache, setCache } from '../services/cache.service.js';
+import { normalizeQuery } from '../utils/queryNormalizer.js';
 
 export interface CreateProfileData {
   id: string;
@@ -58,7 +59,11 @@ export const getAllProfiles = async (
   filters: ProfileFilters,
   options: QueryOptions,
 ): Promise<PaginatedResult> => {
-  const cacheKey = `profiles:${JSON.stringify({ filters, options })}`;
+  const normalizedKey = normalizeQuery(
+    { ...filters } as Record<string, unknown>,
+    { ...options } as Record<string, unknown>,
+  );
+  const cacheKey = `profiles:${normalizedKey}`;
   const cached = await getCache(cacheKey);
   if (cached) {
     return JSON.parse(cached);
