@@ -175,8 +175,14 @@ async function finalizeAuth(githubToken: string): Promise<AuthResult> {
     is_new: !user.last_login_at,
   });
 
+  // Upsert account with GitHub access token
   await prisma.account.upsert({
-    where: { providerAccountId: githubUser.id },
+    where: {
+      provider_providerAccountId: {
+        provider: 'github',
+        providerAccountId: githubUser.id,
+      },
+    },
     create: {
       userId: user.id,
       provider: 'github',
@@ -247,6 +253,19 @@ export async function initiateAuth(
     client_id: clientId ? '***' + clientId.slice(-4) : 'UNDEFINED',
     redirect_uri: redirectUriParam,
   });
+
+  if (
+    redirectUriParam &&
+    !redirectUriParam.includes('/api/auth/github/callback')
+  ) {
+    logger.warn(
+      '[auth] GITHUB_REDIRECT_URI may be incorrect - should point to backend callback',
+      {
+        current: redirectUriParam,
+        expected: 'http(s)://<backend-url>/api/auth/github/callback',
+      },
+    );
+  }
 
   const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=user:email&code_challenge=${codeChallenge}&code_challenge_method=S256&state=${state}&redirect_uri=${encodeURIComponent(redirectUriParam)}`;
 

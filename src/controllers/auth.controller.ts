@@ -125,9 +125,11 @@ export const handleOAuthCallback = catchAsync(
       }
 
       setAuthCookies(res, result.access_token, result.refresh_token);
-      logger.info('[auth] Web callback — cookies set, redirecting to frontend');
+      logger.info(
+        '[auth] Web callback — cookies set, redirecting to frontend dashboard',
+      );
       return res.redirect(
-        `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/auth/callback?token=ok`,
+        `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/dashboard`,
       );
     } catch (err: unknown) {
       logger.error('[auth] Callback failed', {
@@ -135,7 +137,7 @@ export const handleOAuthCallback = catchAsync(
       });
       const msg = err instanceof Error ? err.message : 'Unknown error';
       return res.redirect(
-        `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/auth/callback?error=${encodeURIComponent(msg)}`,
+        `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/dashboard?error=${encodeURIComponent(msg)}`,
       );
     }
   },
