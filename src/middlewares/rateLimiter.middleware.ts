@@ -11,7 +11,7 @@ export const authLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: false,
   keyGenerator: (req: Request) => {
-    return req.ip || req.connection.remoteAddress || 'unknown';
+    return req.ip || 'unknown';
   },
   handler: (_req: Request, res: Response) => {
     res.status(429).json({
@@ -38,7 +38,7 @@ export const apiLimiter = rateLimit({
         ? (req.user as { id: string }).id
         : undefined;
 
-    return userId || req.ip || req.connection.remoteAddress || 'unknown';
+    return userId || req.ip || 'unknown';
   },
   handler: (_req: Request, res: Response) => {
     res.status(429).json({
