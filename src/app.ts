@@ -38,9 +38,8 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(httpLogger);
 
-
-app.use('/auth', authLimiter); 
-app.use('/api/profiles', apiLimiter); 
+app.use('/auth', authLimiter);
+app.use('/api/profiles', apiLimiter);
 
 // Routes
 app.use('/auth', authRouter);
