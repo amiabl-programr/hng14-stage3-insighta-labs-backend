@@ -175,8 +175,14 @@ async function finalizeAuth(githubToken: string): Promise<AuthResult> {
     is_new: !user.last_login_at,
   });
 
+  // Upsert account with GitHub access token
   await prisma.account.upsert({
-    where: { providerAccountId: githubUser.id },
+    where: {
+      provider_providerAccountId: {
+        provider: 'github',
+        providerAccountId: githubUser.id,
+      },
+    },
     create: {
       userId: user.id,
       provider: 'github',
