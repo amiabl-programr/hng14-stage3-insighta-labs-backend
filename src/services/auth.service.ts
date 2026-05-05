@@ -254,6 +254,19 @@ export async function initiateAuth(
     redirect_uri: redirectUriParam,
   });
 
+  if (
+    redirectUriParam &&
+    !redirectUriParam.includes('/api/auth/github/callback')
+  ) {
+    logger.warn(
+      '[auth] GITHUB_REDIRECT_URI may be incorrect - should point to backend callback',
+      {
+        current: redirectUriParam,
+        expected: 'http(s)://<backend-url>/api/auth/github/callback',
+      },
+    );
+  }
+
   const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=user:email&code_challenge=${codeChallenge}&code_challenge_method=S256&state=${state}&redirect_uri=${encodeURIComponent(redirectUriParam)}`;
 
   return { auth_url: authUrl, temp_token: tempToken };
