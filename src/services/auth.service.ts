@@ -52,7 +52,6 @@ type AuthResult = {
 export function encodeState(data: {
   client: 'web' | 'cli';
   temp_token?: string;
-  redirect_uri?: string;
 }): string {
   return Buffer.from(JSON.stringify({ ...data, ts: Date.now() })).toString(
     'base64url',
@@ -62,7 +61,6 @@ export function encodeState(data: {
 export function decodeState(state: string): {
   client: 'web' | 'cli';
   temp_token?: string;
-  redirect_uri?: string;
   ts: number;
 } {
   const parsed = JSON.parse(Buffer.from(state, 'base64url').toString());
@@ -101,7 +99,6 @@ export function getCodeVerifier(state: string): string | null {
 async function exchangeOAuthCode(
   code: string,
   codeVerifier: string,
-  redirectUri?: string,
 ): Promise<string> {
   logger.debug('[auth] Exchanging code for GitHub token', {
     code_prefix: code.slice(0, 8),
@@ -118,7 +115,6 @@ async function exchangeOAuthCode(
       code,
       code_verifier: codeVerifier,
       grant_type: 'authorization_code',
-      ...(redirectUri ? { redirect_uri: redirectUri } : {}),
     }),
   });
 
@@ -234,33 +230,7 @@ export async function initiateAuth(
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = generateCodeChallenge(codeVerifier);
 
-  const callbackUrl = redirectUri ?? process.env.GITHUB_REDIRECT_URI;
-  if (!callbackUrl) {
-    throw new Error('GITHUB_REDIRECT_URI is required');
-  }
-
-  let callbackPath: string;
-  try {
-    callbackPath = new URL(callbackUrl).pathname;
-  } catch {
-    throw new Error('OAuth redirect_uri must be an absolute URL');
-  }
-
-  if (callbackPath !== '/auth/github/callback') {
-    logger.warn(
-      '[auth] GitHub redirect URI should point to the backend callback',
-      {
-        current: callbackUrl,
-        expected: 'http(s)://<backend-url>/auth/github/callback',
-      },
-    );
-  }
-
-  const stateData: {
-    client: 'web' | 'cli';
-    temp_token?: string;
-    redirect_uri?: string;
-  } = { client, redirect_uri: callbackUrl };
+  const stateData: { client: 'web' | 'cli'; temp_token?: string } = { client };
   let tempToken: string | undefined;
 
   if (client === 'cli') {
@@ -277,13 +247,27 @@ export async function initiateAuth(
     state_prefix: state.slice(0, 8),
   });
 
+  const redirectUriParam = redirectUri ?? process.env.GITHUB_REDIRECT_URI ?? '';
   const clientId = process.env.GITHUB_APP_CLIENT_ID!;
   logger.info('[auth] Building authorize URL', {
     client_id: clientId ? '***' + clientId.slice(-4) : 'UNDEFINED',
-    redirect_uri: callbackUrl,
+    redirect_uri: redirectUriParam,
   });
 
-  const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=user:email&code_challenge=${codeChallenge}&code_challenge_method=S256&state=${state}&redirect_uri=${encodeURIComponent(callbackUrl)}`;
+  if (
+    redirectUriParam &&
+    !redirectUriParam.includes('/api/auth/github/callback')
+  ) {
+    logger.warn(
+      '[auth] GITHUB_REDIRECT_URI may be incorrect - should point to backend callback',
+      {
+        current: redirectUriParam,
+        expected: 'http(s)://<backend-url>/api/auth/github/callback',
+      },
+    );
+  }
+
+  const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=user:email&code_challenge=${codeChallenge}&code_challenge_method=S256&state=${state}&redirect_uri=${encodeURIComponent(redirectUriParam)}`;
 
   return { auth_url: authUrl, temp_token: tempToken };
 }
@@ -316,11 +300,7 @@ export async function handleCallback(
     throw new Error('Invalid or expired state parameter');
   }
 
-  const githubToken = await exchangeOAuthCode(
-    code,
-    codeVerifier,
-    stateData.redirect_uri,
-  );
+  const githubToken = await exchangeOAuthCode(code, codeVerifier);
   const result = await finalizeAuth(githubToken);
 
   if (stateData.client === 'cli' && stateData.temp_token) {

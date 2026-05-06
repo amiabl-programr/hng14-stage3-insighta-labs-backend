@@ -45,7 +45,7 @@ model User {
   username      String    
   email         String?      
   avatar_url    String    
-  role          Role      @default(ADMIN)
+  role          Role      @default(ANALYST)
   is_active     Boolean   @default(true)
   last_login_at DateTime? 
   created_at    DateTime  @default(now()) 
