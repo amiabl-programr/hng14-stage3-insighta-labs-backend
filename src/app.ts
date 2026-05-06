@@ -10,8 +10,22 @@ import {
   authLimiter,
   apiLimiter,
 } from './middlewares/rateLimiter.middleware.js';
+import { setupSwagger } from './config/swagger.js';
 
 const app = express();
+
+setupSwagger(app);
+
+const allowedOrigins = new Set(
+  (
+    process.env.CORS_ORIGIN ??
+    process.env.FRONTEND_URL ??
+    'http://localhost:3000'
+  )
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+);
 
 const { doubleCsrfProtection } = doubleCsrf({
   getSecret: () => process.env.CSRF_SECRET ?? 'change-me-in-production',
@@ -27,9 +41,17 @@ const { doubleCsrfProtection } = doubleCsrf({
 });
 
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-CSRF-Token');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Authorization, Content-Type, X-API-Version, X-CSRF-Token',
+  );
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });

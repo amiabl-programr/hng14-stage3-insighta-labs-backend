@@ -1,6 +1,10 @@
 import { prisma } from '../lib/prisma.js';
 import { Profile } from '../generated/prisma/client.js';
-import { getCache, setCache } from '../services/cache.service.js';
+import {
+  deleteCacheByPattern,
+  getCache,
+  setCache,
+} from '../services/cache.service.js';
 import { normalizeQuery } from '../utils/queryNormalizer.js';
 
 export interface CreateProfileData {
@@ -28,7 +32,9 @@ export const findProfileById = async (id: string): Promise<Profile | null> => {
 export const createProfile = async (
   data: CreateProfileData,
 ): Promise<Profile> => {
-  return prisma.profile.create({ data });
+  const profile = await prisma.profile.create({ data });
+  await invalidateProfilesCache();
+  return profile;
 };
 
 export interface ProfileFilters {
@@ -122,5 +128,11 @@ export const getAllProfiles = async (
 };
 
 export const deleteProfile = async (id: string): Promise<Profile> => {
-  return prisma.profile.delete({ where: { id } });
+  const profile = await prisma.profile.delete({ where: { id } });
+  await invalidateProfilesCache();
+  return profile;
+};
+
+export const invalidateProfilesCache = async (): Promise<void> => {
+  await deleteCacheByPattern('profiles:*');
 };
