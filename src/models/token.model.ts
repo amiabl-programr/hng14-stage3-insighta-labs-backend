@@ -1,12 +1,14 @@
 // src/models/token.model.ts
 import { prisma } from '../lib/prisma.js';
 
+const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 export async function storeRefreshToken(userId: string, refreshToken: string) {
   return prisma.account.updateMany({
     where: { userId, provider: 'github' },
     data: {
       refresh_token: refreshToken,
-      expires_at: new Date(Date.now() + 5 * 60 * 1000), // 5 min from now
+      expires_at: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
     },
   });
 }
@@ -19,6 +21,13 @@ export async function consumeRefreshToken(refreshToken: string) {
     });
 
     if (!account) return null; // token not found or already consumed
+    if (account.expires_at && account.expires_at <= new Date()) {
+      await tx.account.update({
+        where: { id: account.id },
+        data: { refresh_token: null, expires_at: null },
+      });
+      return null;
+    }
 
     // Invalidate immediately
     await tx.account.update({
