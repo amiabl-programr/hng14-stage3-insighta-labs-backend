@@ -128,12 +128,16 @@ export const handleOAuthCallback = catchAsync(
       logger.info(
         '[auth] Web callback — cookies set, redirecting to frontend dashboard',
       );
-      return res.redirect(process.env.FRONTEND_URL!);
+      return res.redirect(
+          process.env.FRONTEND_URL!,
+      );
     } catch (err: unknown) {
       logger.error('[auth] Callback failed', {
         error: err instanceof Error ? err.message : 'unknown',
       });
-      return res.redirect(process.env.FRONTEND_URL!);
+      return res.redirect(
+          process.env.FRONTEND_URL!,
+      );
     }
   },
 );
@@ -145,7 +149,7 @@ export const refreshToken = catchAsync(async (req: Request, res: Response) => {
     logger.warn('[auth] Refresh attempt without token');
     return res
       .status(401)
-      .json({ status: 'error', message: 'Refresh token required' });
+    .json({ status: 'error', message: 'Refresh token required' });
   }
 
   try {
