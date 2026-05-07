@@ -52,7 +52,21 @@ app.get('/csrf-token', (req, res) => {
 
 app.use('/auth', authRouter);
 
-app.use('/api/profiles', doubleCsrfProtection, profilesRouter);
+app.use(
+  '/api/profiles',
+  (req, res, next) => {
+    const isSwagger =
+      req.headers.origin?.includes('swagger') ||
+      req.headers.referer?.includes('/api-docs');
+
+    if (isSwagger) {
+      return next();
+    }
+
+    return doubleCsrfProtection(req, res, next);
+  },
+  profilesRouter,
+);
 
 app.use((req, _res, next) => {
   next(new AppError('Route not found', 404));
