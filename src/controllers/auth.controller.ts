@@ -140,7 +140,7 @@ export const handleOAuthCallback = catchAsync(
 );
 
 export const refreshToken = catchAsync(async (req: Request, res: Response) => {
-  const refreshTokenStr = req.cookies?.refresh_token ?? req.body.refresh_token;
+  const refreshTokenStr = req.cookies?.refresh_token ?? req.body?.refresh_token;
 
   if (!refreshTokenStr) {
     logger.warn('[auth] Refresh attempt without token');
