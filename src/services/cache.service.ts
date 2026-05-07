@@ -1,44 +1,11 @@
-import { Redis } from 'ioredis';
+import { connection } from '../lib/queue.js';
 import { logger } from '../config/logger.js';
 
-const redisClient = process.env.REDIS_URL
-  ? new Redis(process.env.REDIS_URL, {
-      lazyConnect: true,
-      maxRetriesPerRequest: 1,
-      enableOfflineQueue: false,
-    })
-  : null;
-
-redisClient?.on('error', (err: Error) =>
-  logger.error('[redis] Client error', { error: err.message }),
-);
-
-let redisConnection: Promise<void> | null = null;
-
-const getRedisClient = async (): Promise<Redis | null> => {
-  if (!redisClient) return null;
-  if (redisClient.status === 'ready') return redisClient;
-
-  try {
-    redisConnection ??= redisClient.connect().finally(() => {
-      redisConnection = null;
-    });
-    await redisConnection;
-    return redisClient;
-  } catch (err) {
-    logger.warn('[redis] Connection skipped', {
-      error: err instanceof Error ? err.message : 'unknown',
-    });
-    return null;
-  }
-};
-
 export const getCache = async (key: string): Promise<string | null> => {
-  const client = await getRedisClient();
-  if (!client) return null;
+  if (!connection) return null;
 
   try {
-    return await client.get(key);
+    return await connection.get(key);
   } catch (err) {
     logger.warn('[redis] Cache read skipped', {
       key,
@@ -53,11 +20,10 @@ export const setCache = async (
   value: string,
   ttlSeconds: number,
 ): Promise<void> => {
-  const client = await getRedisClient();
-  if (!client) return;
+  if (!connection) return;
 
   try {
-    await client.setex(key, ttlSeconds, value);
+    await connection.setex(key, ttlSeconds, value);
   } catch (err) {
     logger.warn('[redis] Cache write skipped', {
       key,
@@ -67,11 +33,10 @@ export const setCache = async (
 };
 
 export const deleteCache = async (key: string): Promise<void> => {
-  const client = await getRedisClient();
-  if (!client) return;
+  if (!connection) return;
 
   try {
-    await client.del(key);
+    await connection.del(key);
   } catch (err) {
     logger.warn('[redis] Cache delete skipped', {
       key,
@@ -81,14 +46,13 @@ export const deleteCache = async (key: string): Promise<void> => {
 };
 
 export const deleteCacheByPattern = async (pattern: string): Promise<void> => {
-  const client = await getRedisClient();
-  if (!client) return;
+  if (!connection) return;
 
   try {
-    const stream = client.scanStream({ match: pattern, count: 100 });
+    const stream = connection.scanStream({ match: pattern, count: 100 });
     for await (const keys of stream as AsyncIterable<string[]>) {
       if (keys.length > 0) {
-        await client.del(...keys);
+        await connection.del(...keys);
       }
     }
   } catch (err) {
@@ -98,5 +62,3 @@ export const deleteCacheByPattern = async (pattern: string): Promise<void> => {
     });
   }
 };
-
-export default redisClient;
