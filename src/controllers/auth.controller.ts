@@ -126,9 +126,13 @@ export const handleOAuthCallback = catchAsync(
 
       setAuthCookies(res, result.access_token, result.refresh_token);
       logger.info(
-        '[auth] Web callback — cookies set, redirecting to frontend dashboard',
+        '[auth] Web callback — cookies set, returning user details',
       );
-      return res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
+      return res.json({
+        status: 'success',
+        message: 'Authentication successful',
+        data: { user: result.user },
+      });
     } catch (err: unknown) {
       logger.error('[auth] Callback failed', {
         error: err instanceof Error ? err.message : 'unknown',
