@@ -6,7 +6,7 @@ if (!CSRF_SECRET) {
   throw new Error('CSRF_SECRET env var must be set');
 }
 
-export const { doubleCsrfProtection, generateToken } = doubleCsrf({
+const csrf = doubleCsrf({
   getSecret: () => CSRF_SECRET,
   getSessionIdentifier: (req: Request) =>
     (req as Request & { cookies?: Record<string, string> }).cookies
@@ -20,3 +20,6 @@ export const { doubleCsrfProtection, generateToken } = doubleCsrf({
   size: 64,
   ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
 });
+
+export const doubleCsrfProtection = csrf.doubleCsrfProtection;
+export const generateToken = csrf.generateCsrfToken;
