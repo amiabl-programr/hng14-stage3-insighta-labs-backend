@@ -21,11 +21,11 @@ router.use(authenticate);
 
 router.get('/search', searchProfiles);
 router.get('/export', exportProfiles);
+router.post('/upload', requireRole('ADMIN'), upload.single('file'), uploadCSV);
+router.get('/upload/:jobId', getJobStatus);
 router.get('/', getProfiles);
 router.post('/', requireRole('ADMIN'), createProfile);
 router.get('/:id', getProfile);
 router.delete('/:id', requireRole('ADMIN'), deleteProfile);
-router.post('/upload', requireRole('ADMIN'), upload.single('file'), uploadCSV);
-router.get('/upload/:jobId', getJobStatus);
 
 export default router;
