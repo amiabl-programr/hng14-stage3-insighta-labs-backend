@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import { saveUser } from '../models/auth.model.js';
 import { signAccessToken, signRefreshToken } from './token.service.js';
-import { storeRefreshToken } from '../models/token.model.js';
 import { prisma } from '../lib/prisma.js';
 import { logger } from '../config/logger.js';
 
@@ -180,7 +179,9 @@ async function finalizeAuth(githubToken: string): Promise<AuthResult> {
     is_new: !user.last_login_at,
   });
 
-  // Upsert account with GitHub access token
+  const accessToken = signAccessToken(user.id, user.role);
+  const refreshToken = signRefreshToken(user.id);
+
   await prisma.account.upsert({
     where: {
       provider_providerAccountId: {
@@ -192,14 +193,16 @@ async function finalizeAuth(githubToken: string): Promise<AuthResult> {
       userId: user.id,
       provider: 'github',
       providerAccountId: githubId,
-      access_token: githubToken,
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
-    update: { access_token: githubToken },
+    update: {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
   });
-
-  const accessToken = signAccessToken(user.id, user.role);
-  const refreshToken = signRefreshToken(user.id);
-  await storeRefreshToken(user.id, refreshToken);
   logger.info('[auth] JWTs issued', { user_id: user.id, role: user.role });
 
   await prisma.user.update({

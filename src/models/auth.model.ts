@@ -61,7 +61,7 @@ export async function saveUser(user: GithubUserData) {
     include: { user: true },
   });
 
-  logger.info("New User created");
+  logger.info('New User created');
 
   return newAccount.user;
 }

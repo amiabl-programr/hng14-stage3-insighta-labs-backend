@@ -2,10 +2,15 @@ import { prisma } from '../lib/prisma.js';
 
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-export async function storeRefreshToken(userId: string, refreshToken: string) {
+export async function storeRefreshToken(
+  userId: string,
+  refreshToken: string,
+  accessToken?: string,
+) {
   return prisma.account.updateMany({
     where: { userId, provider: 'github' },
     data: {
+      access_token: accessToken,
       refresh_token: refreshToken,
       expires_at: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
     },
