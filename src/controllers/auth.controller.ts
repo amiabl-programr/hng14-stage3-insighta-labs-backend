@@ -125,9 +125,7 @@ export const handleOAuthCallback = catchAsync(
       }
 
       setAuthCookies(res, result.access_token, result.refresh_token);
-      logger.info(
-        '[auth] Web callback — cookies set, returning user details',
-      );
+      logger.info('[auth] Web callback — cookies set, returning user details');
       return res.json({
         status: 'success',
         message: 'Authentication successful',

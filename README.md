@@ -33,31 +33,38 @@ Backend API for the Insighta Labs platform — a unified system powering a CLI t
         │                       │                       │
         └───────────┬───────────┘                       │
                     │                                   │
-              ┌─────▼───────────────────────────────────▼─────┐
-              │              Backend API (Express)            │
-              │  ┌─────────────────────────────────────────┐  │
-              │  │ Middleware Pipeline                     │  │
-              │  │ CORS → JSON → Cookie → Morgan → Routes │  │
-              │  └─────────────────────────────────────────┘  │
-              │  ┌────────────┐  ┌──────────────────────────┐  │
-              │  │ /auth/*    │  │ /api/profiles/*          │  │
-              │  │ GitHub     │  │ Auth + Role + Version    │  │
-              │  │ OAuth/PKCE │  │ Middleware Stack         │  │
-              │  └────────────┘  └──────────────────────────┘  │
-               └────────────────────────┬────────────────────────┘
-                                        │
-                               ┌────────▼────────┐
-                               │  PostgreSQL      │
-                               │  (via Prisma)    │
-                               │  Users, Accounts │
-                               │  Profiles        │
-                               └─────────────────┘
-                                        │
-                               ┌────────▼────────┐
-                               │  Redis Cache    │
-                               │  Query results  │
-                               │  External APIs  │
-                               └─────────────────┘
+               ┌─────▼───────────────────────────────────▼─────┐
+               │              Backend API (Express)            │
+               │  ┌─────────────────────────────────────────┐  │
+               │  │ Middleware Pipeline                     │  │
+               │  │ CORS → JSON → Cookie → Morgan → Routes │  │
+               │  └─────────────────────────────────────────┘  │
+               │  ┌────────────┐  ┌──────────────────────────┐  │
+               │  │ /auth/*    │  │ /api/profiles/*          │  │
+               │  │ GitHub     │  │ Auth + Role + Version    │  │
+               │  │ OAuth/PKCE │  │ Middleware Stack         │  │
+               │  └────────────┘  └──────────────────────────┘  │
+               │  ┌──────────────────────────────────────────┐  │
+               │  │ BullMQ Queue (csv-upload)                │  │
+               │  │ ┌──────────┐  ┌───────────────────────┐  │  │
+               │  │ │ Producer │→│ Worker (batch insert)  │  │  │
+               │  │ └──────────┘  └───────────────────────┘  │  │
+               │  └──────────────────────────────────────────┘  │
+                └────────────────────────┬────────────────────────┘
+                                         │
+                                ┌────────▼────────┐
+                                │  PostgreSQL      │
+                                │  (via Prisma)    │
+                                │  Users, Accounts │
+                                │  Profiles        │
+                                └─────────────────┘
+                                         │
+                                ┌────────▼────────┐
+                                │  Redis           │
+                                │  BullMQ + Cache  │
+                                │  Query results   │
+                                │  External APIs   │
+                                └─────────────────┘
  ```
 
 ### Stage 4B Optimizations
@@ -75,10 +82,12 @@ The backend implements three optimizations for handling 1M+ records and high que
 - **Utility**: `src/utils/queryNormalizer.ts`
 
 #### 3. CSV Data Ingestion
-- **Streaming Upload**: `POST /api/profiles/upload` (admin only)
-- **Batch Processing**: 1000 rows/batch using `Prisma.createMany`
+- **Queue-based Upload**: `POST /api/profiles/upload` (admin only) enqueues job via BullMQ (`csv-upload` queue)
+- **Job Status**: `GET /api/profiles/upload/:jobId` to track progress, get results on completion
+- **Batch Processing**: 1000 rows/batch using `Prisma.createMany` in the worker
 - **Validation**: Skip rows with missing fields, invalid age, unrecognized gender, duplicate names
 - **Partial Failure Support**: No rollback, returns summary with `total_rows`, `inserted`, `skipped`, `reasons`
+- **Retry**: 3 automatic attempts with exponential backoff
 - **Memory Efficient**: Streaming with `fast-csv`, no full file in memory
 
 The system follows a three-tier architecture:
@@ -113,7 +122,7 @@ The backend supports **both web and CLI clients** through a single OAuth flow, d
    → Fetches user profile, creates/updates user in DB
    → Signs JWT access_token (15m) + refresh_token (7d)
    → Sets both as HTTP-only cookies
-   → Redirects to frontend with ?token=ok
+   → Returns user details as JSON `{ user: { id, username, email, avatar_url, role } }`
 ```
 
 ### CLI Flow (Token-based)
@@ -230,21 +239,39 @@ The parser uses regex pattern matching to extract structured filter parameters f
 | `GET` | `/api/profiles/:id` | Get single profile by ID | Authenticated |
 | `POST` | `/api/profiles` | Create profile (calls external APIs) | `ADMIN` |
 | `DELETE` | `/api/profiles/:id` | Delete profile | `ADMIN` |
-| `POST` | `/api/profiles/upload` | Upload CSV file (max 500k rows) | `ADMIN` |
+| `POST` | `/api/profiles/upload` | Enqueue CSV file for processing (max 500k rows) | `ADMIN` |
+| `GET` | `/api/profiles/upload/:jobId` | Get job status / upload result | Authenticated |
 
 ### CSV Upload Response Format
 
+**202 Accepted** — Job enqueued:
+```json
+{
+  "status": "success",
+  "message": "Upload queued for processing",
+  "data": { "job_id": "bullmq-job-id" }
+}
+```
+
+**GET /api/profiles/upload/:jobId** — Poll for status:
 ```json
 {
   "status": "success",
   "data": {
-    "total_rows": 50000,
-    "inserted": 48231,
-    "skipped": 1769,
-    "reasons": {
-      "duplicate_name": 1203,
-      "invalid_age": 312,
-      "missing_fields": 254
+    "job_id": "bullmq-job-id",
+    "state": "completed",
+    "progress": 1,
+    "file": "profiles.csv",
+    "result": {
+      "total_rows": 50000,
+      "inserted": 48231,
+      "skipped": 1769,
+      "reasons": {
+        "duplicate_name": 1203,
+        "invalid_age": 312,
+        "missing_fields": 254,
+        "invalid_gender": 0
+      }
     }
   }
 }
@@ -424,24 +451,30 @@ src/
 │   └── logger.ts                 # Winston + Morgan logger setup
 ├── controllers/
 │   ├── auth.controller.ts        # Auth flow handlers
+│   ├── csvupload.controller.ts   # CSV upload queue producer
+│   ├── job.controller.ts         # Job status consumer
 │   └── profile.controller.ts     # Profile CRUD + search
 ├── lib/
-│   └── prisma.ts                 # Prisma client initialization
+│   ├── prisma.ts                 # Prisma client initialization
+│   └── queue.ts                  # Redis connection (shared by BullMQ + cache)
 ├── middlewares/
 │   ├── auth.middleware.ts        # Bearer token + cookie authentication
 │   ├── authorize.middleware.ts   # Role-based authorization
 │   ├── apiversion.middleware.ts  # X-API-Version header check
-│   └── error.middleware.ts       # Global error handler
+│   ├── error.middleware.ts       # Global error handler
+│   └── upload.middleware.ts      # Multer config for CSV uploads
 ├── models/
 │   ├── auth.model.ts             # User upsert logic
 │   ├── token.model.ts            # Refresh token storage + rotation
 │   └── user.model.ts             # User lookup by ID
+├── queues/
+│   └── upload.queue.ts           # csv-upload queue definition
 ├── routes/
 │   ├── auth.route.ts             # /auth/* routes
 │   └── profile.routes.ts         # /api/profiles/* routes
 ├── services/
 │   ├── auth.service.ts           # OAuth, PKCE, device flow, state encoding
-│   ├── cache.service.ts          # Redis client + get/set/delete operations
+│   ├── cache.service.ts          # Redis cache (shares connection from lib/queue.ts)
 │   ├── external.service.ts       # Genderize, Agify, Nationalize API clients
 │   └── token.service.ts          # JWT sign/verify
 ├── types/
@@ -452,10 +485,8 @@ src/
 │   ├── classify.ts               # Age group classification
 │   ├── queryNormalizer.ts        # Deterministic query normalization
 │   └── responseHandler.ts        # Standardized response helpers
-├── controllers/
-│   └── csvupload.controller.ts   # CSV streaming upload handler
-├── middlewares/
-│   └── upload.middleware.ts      # Multer config for CSV uploads
+├── workers/
+│   └── upload.worker.ts          # CSV processing worker (BullMQ)
 ├── app.ts                        # Express app + middleware pipeline
 └── server.ts                     # HTTP server entry point
 ```

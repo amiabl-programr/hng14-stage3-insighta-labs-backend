@@ -17,12 +17,18 @@
   - Produces consistent cache keys for same-intent queries
 
 ### Task 3: CSV Data Ingestion
-- **Streaming Upload Endpoint**: `POST /api/profiles/upload` (admin only)
+- **Queue-based Upload**: `POST /api/profiles/upload` (admin only) enqueues CSV via BullMQ
   - Uses `multer` for file upload middleware
+  - Job status available at `GET /api/profiles/upload/:jobId`
+- **BullMQ Worker** (`src/workers/upload.worker.ts`):
   - Streams CSV with `fast-csv` (no full file in memory)
   - Processes in batches of 1000 rows using `Prisma.createMany`
-  - Handles partial failures without rollback
-  - Returns summary with `total_rows`, `inserted`, `skipped`, and `reasons`
+  - Detects duplicate names across batches via DB query
+  - Reports progress via `job.updateProgress()`
+  - Retry: 3 attempts with exponential backoff (5s initial)
+  - Cleans up temp file after processing (success or failure)
+- **Graceful Shutdown**: `SIGTERM`/`SIGINT` handlers stop worker, close queue, and quit Redis
+- **Redis Connections Unified**: Cache service shares the BullMQ Redis connection (no duplicate clients)
 
 ---
 
@@ -98,6 +104,8 @@
 | `feat/optimize-query-perf-cache` | Task 1: Database indexes, Redis caching, connection pool | Task 1 (Query Performance) |
 | `feat/query-normalization` | Task 2: Query normalization utility | Task 2 (Query Normalization) |
 | `feat/streaming-csv-ingestion` | Task 3: CSV upload with streaming processing | Task 3 (CSV Ingestion) |
+| `feat/csv-upload-queue` | BullMQ queue, worker, job status endpoint, graceful shutdown | Queue migration |
+| `fix/oauth-route-bugs` | OAuth callback returns JSON, fix route ordering for /upload | Bug fixes |
 
 ---
 
