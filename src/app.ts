@@ -28,7 +28,7 @@ const allowedOrigins = new Set(
 );
 
 const { doubleCsrfProtection } = doubleCsrf({
-  getSecret: () => process.env.CSRF_SECRET ?? 'change-me-in-production',
+  getSecret: () => process.env.CSRF_SECRET!,
   getSessionIdentifier: (req) => req.user?.id ?? 'anonymous',
   cookieName: 'x-csrf-token',
   cookieOptions: {
