@@ -5,7 +5,7 @@ import profilesRouter from './routes/profile.routes.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 import authRouter from './routes/auth.route.js';
 import { AppError } from './utils/AppError.js';
-import { httpLogger } from './config/logger.js';
+import { httpLogger, logger } from './config/logger.js';
 import { setupSwagger } from './config/swagger.js';
 import { doubleCsrfProtection, generateToken } from './lib/csrf.js';
 
@@ -19,14 +19,16 @@ const allowedOrigins = (
   'http://localhost:3000'
 )
   .split(',')
-  .map((origin) => origin.trim())
+  .map((origin) => origin.trim().replace(/\/+$/, ''))
   .filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (!origin || allowedOrigins.includes(origin)) cb(null, true);
-      else cb(new Error('Not allowed by CORS'));
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      if (process.env.NODE_ENV !== 'production') return cb(null, true);
+      logger.warn('[cors] Rejected origin: %s', origin);
+      return cb(new Error('Not allowed by CORS'));
     },
     credentials: true,
     allowedHeaders: [
