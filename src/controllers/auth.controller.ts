@@ -128,17 +128,12 @@ export const handleOAuthCallback = catchAsync(
       logger.info(
         '[auth] Web callback — cookies set, redirecting to frontend dashboard',
       );
-      return res.redirect(
-        `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/dashboard`,
-      );
+      return res.redirect(process.env.FRONTEND_URL!);
     } catch (err: unknown) {
       logger.error('[auth] Callback failed', {
         error: err instanceof Error ? err.message : 'unknown',
       });
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      return res.redirect(
-        `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/dashboard?error=${encodeURIComponent(msg)}`,
-      );
+      return res.redirect(process.env.FRONTEND_URL!);
     }
   },
 );
