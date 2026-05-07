@@ -17,12 +17,40 @@
   - Produces consistent cache keys for same-intent queries
 
 ### Task 3: CSV Data Ingestion
-- **Streaming Upload Endpoint**: `POST /api/profiles/upload` (admin only)
+- **Queue-based Upload**: `POST /api/profiles/upload` (admin only) enqueues CSV via BullMQ
   - Uses `multer` for file upload middleware
+  - Returns `202` with `job_id` immediately
+  - Job status available at `GET /api/profiles/upload/:jobId`
+- **BullMQ Worker** (`src/workers/upload.worker.ts`):
   - Streams CSV with `fast-csv` (no full file in memory)
   - Processes in batches of 1000 rows using `Prisma.createMany`
-  - Handles partial failures without rollback
-  - Returns summary with `total_rows`, `inserted`, `skipped`, and `reasons`
+  - Detects duplicate names across batches via DB query
+  - Reports progress via `job.updateProgress()`
+  - Retry: 3 attempts with exponential backoff (5s initial)
+  - Cleans up temp file after processing (success or failure)
+- **Graceful Shutdown**: `SIGTERM`/`SIGINT` handlers stop worker, close queue, and quit Redis
+- **Redis Connections Unified**: Cache service shares the BullMQ Redis connection (no duplicate clients)
+
+## CSRF Protection
+
+- **Startup guard**: Server throws if `CSRF_SECRET` env var is not set
+- **Double-submit cookie pattern**: Uses `csrf-csrf` library
+- **Session-bound tokens**: `getSessionIdentifier` binds to `refresh_token` cookie
+- **Protected routes**:
+  - All `/api/profiles/*` mutating endpoints
+  - `POST /auth/refresh` and `POST /auth/logout`
+- **Token endpoint**: `GET /csrf-token` returns a fresh CSRF token for the frontend
+- **CORS**: Replaced manual CORS with the `cors` package (supports PUT/PATCH, sends headers on error responses)
+- **CSRF config**: Extracted to `src/lib/csrf.ts` to avoid circular imports
+
+## OAuth Callback
+
+- **Success**: Sets HTTP-only cookies (`access_token`, `refresh_token`) and redirects to `FRONTEND_URL/auth/callback`
+- **Error**: Returns JSON `{ status: "error", message: "..." }` with status 500 (no redirect)
+
+## Route Ordering
+
+- `POST /api/profiles/upload` and `GET /api/profiles/upload/:jobId` are registered before `/:id` routes to prevent `upload` from being matched as a dynamic ID parameter
 
 ---
 
@@ -98,6 +126,9 @@
 | `feat/optimize-query-perf-cache` | Task 1: Database indexes, Redis caching, connection pool | Task 1 (Query Performance) |
 | `feat/query-normalization` | Task 2: Query normalization utility | Task 2 (Query Normalization) |
 | `feat/streaming-csv-ingestion` | Task 3: CSV upload with streaming processing | Task 3 (CSV Ingestion) |
+| `feat/csv-upload-queue` | BullMQ queue, worker, job status endpoint, graceful shutdown | Queue migration |
+| `feat/csv-upload-queue` | BullMQ queue, worker, job status endpoint, graceful shutdown | Queue migration |
+| `fix/oauth-route-bugs` | CSRF hardening, OAuth callback redirect fix, route ordering, cors package, docs | Bug fixes & security |
 
 ---
 

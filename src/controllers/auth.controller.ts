@@ -125,21 +125,22 @@ export const handleOAuthCallback = catchAsync(
       }
 
       setAuthCookies(res, result.access_token, result.refresh_token);
-      logger.info(
-        '[auth] Web callback — cookies set, redirecting to frontend dashboard',
-      );
-      return res.redirect(process.env.FRONTEND_URL!);
+      logger.info('[auth] Web callback — cookies set, redirecting to frontend');
+      return res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
     } catch (err: unknown) {
       logger.error('[auth] Callback failed', {
         error: err instanceof Error ? err.message : 'unknown',
       });
-      return res.redirect(process.env.FRONTEND_URL!);
+      return res.status(500).json({
+        status: 'error',
+        message: err instanceof Error ? err.message : 'Authentication failed',
+      });
     }
   },
 );
 
 export const refreshToken = catchAsync(async (req: Request, res: Response) => {
-  const refreshTokenStr = req.cookies?.refresh_token ?? req.body.refresh_token;
+  const refreshTokenStr = req.cookies?.refresh_token ?? req.body?.refresh_token;
 
   if (!refreshTokenStr) {
     logger.warn('[auth] Refresh attempt without token');
