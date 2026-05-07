@@ -12,7 +12,7 @@ info:
 servers:
   - url: http://localhost:3000
     description: Local development server
-  - url: https://api.example.com
+  - url: https://hng14-stage3-insighta-labs-backend.pxxl.click
     description: Production server
 
 security:

@@ -11,8 +11,12 @@ const swaggerPath = path.resolve(__dirname, '../docs/swagger.yaml');
 const swaggerDocument = YAML.load(swaggerPath);
 
 export const setupSwagger = (app: Express): void => {
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'Profile Management API Docs',
-  }));
+  app.use(
+    '/api-docs',
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerDocument, {
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'Profile Management API Docs',
+    }),
+  );
 };

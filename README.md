@@ -188,7 +188,7 @@ requireApiVersion → authenticate → [requireRole('ADMIN')] → controller
 | `ANALYST` | ✅ | ✅ | ❌ 403 | ❌ 403 |
 | `ADMIN` | ✅ | ✅ | ✅ | ✅ |
 
-- Default role on signup: `ANALYST`
+- Default role on signup: `ADMIN`
 - If `is_active = false` → 403 Forbidden on all authenticated requests
 
 ---
@@ -403,7 +403,7 @@ The backend uses **Winston** for application logs and **Morgan** for HTTP reques
 ```
 2026-05-04T12:00:00.000Z [info]: [auth] Initiating auth flow {"client":"web"}
 2026-05-04T12:00:01.000Z [info]: [auth] GitHub token exchange successful
-2026-05-04T12:00:01.000Z [info]: [auth] User saved {"user_id":"...","role":"ANALYST"}
+2026-05-04T12:00:01.000Z [info]: [auth] User saved {"user_id":"...","role":"ADMIN"}
 2026-05-04T12:00:01.000Z [debug]: [http] GET /api/profiles 200 45ms
 2026-05-04T12:00:02.000Z [warn]: [auth] Token verification failed {"method":"GET","path":"/api/profiles"}
 ```

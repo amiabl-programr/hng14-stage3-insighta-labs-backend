@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-"postbuild": "cp -r src/docs dist/docs 2>/dev/null || xcopy /E /I src\\docs dist\\docs",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "lint": "eslint .",

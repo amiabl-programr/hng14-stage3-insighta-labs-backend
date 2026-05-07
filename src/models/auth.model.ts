@@ -57,7 +57,6 @@ export async function saveUser(user: GithubUserData) {
           github_id: githubId,
           email: user.email ?? undefined,
           avatar_url: user.avatar_url,
-          role: 'ANALYST',
           is_active: true,
         },
       },
