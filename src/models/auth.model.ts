@@ -3,13 +3,10 @@ import { GithubUserData } from '../services/auth.service.js';
 import { logger } from '../config/logger.js';
 
 export async function saveUser(user: GithubUserData) {
-  const githubId =
-    typeof user.github_id === 'string'
-      ? parseInt(user.github_id, 10)
-      : user.github_id;
+  const githubId = String(user.github_id).trim();
   logger.info('github ID', githubId);
 
-  if (!githubId || isNaN(githubId)) {
+  if (!githubId) {
     throw new Error('Invalid GitHub ID');
   }
 

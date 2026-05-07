@@ -160,15 +160,16 @@ async function exchangeDeviceCode(githubDeviceCode: string): Promise<string> {
 async function finalizeAuth(githubToken: string): Promise<AuthResult> {
   logger.info('[auth] Fetching GitHub user data');
   const githubUser = await getGithubUserData(githubToken);
+  const githubId = String(githubUser.id);
   logger.info('[auth] GitHub user fetched', {
     github_login: githubUser.login,
-    github_id: githubUser.id,
+    github_id: githubId,
   });
   const email = githubUser.email ?? (await getGithubUserEmail(githubToken));
 
   logger.info('[auth] Saving user to database');
   const user = await saveUser({
-    github_id: githubUser.id,
+    github_id: githubId,
     username: githubUser.login,
     email,
     avatar_url: githubUser.avatar_url,
@@ -179,27 +180,27 @@ async function finalizeAuth(githubToken: string): Promise<AuthResult> {
     is_new: !user.last_login_at,
   });
 
-  // Upsert account with GitHub access token
+  const accessToken = signAccessToken(user.id, user.role);
+  const refreshToken = signRefreshToken(user.id);
+  await storeRefreshToken(user.id, refreshToken);
+  logger.info('[auth] JWTs issued', { user_id: user.id, role: user.role });
+
   await prisma.account.upsert({
     where: {
       provider_providerAccountId: {
         provider: 'github',
-        providerAccountId: githubUser.id,
+        providerAccountId: githubId,
       },
     },
     create: {
       userId: user.id,
       provider: 'github',
-      providerAccountId: githubUser.id,
-      access_token: githubToken,
+      providerAccountId: githubId,
+      access_token: accessToken,
+      refresh_token: refreshToken,
     },
-    update: { access_token: githubToken },
+    update: { access_token: accessToken, refresh_token: refreshToken },
   });
-
-  const accessToken = signAccessToken(user.id, user.role);
-  const refreshToken = signRefreshToken(user.id);
-  await storeRefreshToken(user.id, refreshToken);
-  logger.info('[auth] JWTs issued', { user_id: user.id, role: user.role });
 
   await prisma.user.update({
     where: { id: user.id },
@@ -457,7 +458,7 @@ async function getGithubUserEmail(token: string): Promise<string | null> {
 }
 
 export interface GithubUserData {
-  github_id: number;
+  github_id: string | number;
   username: string;
   email: string | null;
   avatar_url: string;
