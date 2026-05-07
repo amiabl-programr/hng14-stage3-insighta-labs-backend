@@ -137,7 +137,10 @@ export const handleOAuthCallback = catchAsync(
       logger.error('[auth] Callback failed', {
         error: err instanceof Error ? err.message : 'unknown',
       });
-      return res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
+      return res.status(500).json({
+        status: 'error',
+        message: err instanceof Error ? err.message : 'Authentication failed',
+      });
     }
   },
 );
