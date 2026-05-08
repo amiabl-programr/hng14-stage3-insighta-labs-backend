@@ -148,6 +148,7 @@ async function processCSV(
   const batchSize = 1000;
   let batch: CSVRow[] = [];
   const existingNames = new Set<string>();
+  let rowsProcessed = 0;
 
   await new Promise<void>((resolve, reject) => {
     const csvStream = csv
@@ -166,8 +167,9 @@ async function processCSV(
 
           if (batch.length >= batchSize) {
             summary.inserted += await processBatch(batch, summary);
+            rowsProcessed += batch.length;
             batch = [];
-            onProgress(0.5);
+            onProgress(Math.min(0.99, rowsProcessed / 500000));
           }
 
           csvStream.resume();
@@ -226,7 +228,7 @@ export const worker = connection
           });
         }
       },
-      { connection, concurrency: 1 },
+      { connection, concurrency: 3 },
     )
   : null;
 
