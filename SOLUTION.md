@@ -127,7 +127,7 @@
 | `feat/query-normalization` | Task 2: Query normalization utility | Task 2 (Query Normalization) |
 | `feat/streaming-csv-ingestion` | Task 3: CSV upload with streaming processing | Task 3 (CSV Ingestion) |
 | `feat/csv-upload-queue` | BullMQ queue, worker, job status endpoint, graceful shutdown | Queue migration |
-| `feat/csv-upload-queue` | BullMQ queue, worker, job status endpoint, graceful shutdown | Queue migration |
+| `fix/csv-upload-concurrency` | Concurrent uploads, real progress tracking, connection pool config | Bug fixes & optimization |
 | `fix/oauth-route-bugs` | CSRF hardening, OAuth callback redirect fix, route ordering, cors package, docs | Bug fixes & security |
 
 ---
