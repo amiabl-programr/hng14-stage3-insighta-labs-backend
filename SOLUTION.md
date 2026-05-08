@@ -3,11 +3,11 @@
 ## 1. Optimization Approach
 
 ### Task 1: Query Performance Optimization
-- **Database Indexes**: Added single-column indexes on `country_id`, `gender`, `age_group`, `created_at` and composite index on `[country_id, gender, age_group]` in `prisma/schema.prisma` (per requirement)
+- **Database Indexes**: Added single-column indexes on `country_id`, `gender`, `age_group`, `created_at` and composite index on `[country_id, gender, age_group]` in `prisma/schema.prisma`  
 - **Connection Pooling**: Configured Prisma client with explicit connection settings (20 connections) per requirement
 - **Redis Caching**:
-  - Query results cached with 5-minute TTL in `profile.model.ts` (per requirement)
-  - External API responses (Genderize, Agify, Nationalize) cached with 24-hour TTL in `external.service.ts` (per requirement)
+  - Query results cached with 5-minute TTL in `profile.model.ts`  
+  - External API responses (Genderize, Agify, Nationalize) cached with 24-hour TTL in `external.service.ts`  
 
 ### Task 2: Query Normalization
 - **Normalization Utility**: Created `src/utils/queryNormalizer.ts` that:
@@ -70,24 +70,10 @@
 
 ---
 
-## 3. Before/After Comparison
-
-*Metrics based on expected performance with 1M+ records, hundreds-thousands of queries/minute*
-
-| Query Type | Before (no indexes/cache) | After (with indexes + cache) | Improvement |
-|-----------|---------------------------|------------------------------|-------------|
-| Filtered query (gender + country) | ~2000ms (full table scan) | ~50ms (index + cache hit) | ~97.5% |
-| Unfiltered query with pagination | ~1500ms | ~200ms (with index) | ~86.7% |
-| External API calls (per name) | ~300-500ms (network call) | ~5ms (cache hit) | ~98% |
-| CSV upload (500k rows) | N/A (not supported) | ~5-10 minutes (streaming) | New feature |
-
-*Note: P50 latency target < 500ms (requirement). Cached queries achieve ~50ms.* |
-
-*Note: Actual metrics depend on hardware, database size, and Redis instance location. Run tests with your dataset to populate exact numbers.*
 
 ---
 
-## 4. Edge Case Handling
+## 3. Edge Case Handling
 
 ### Partial Failures (CSV Upload)
 - **Row-level validation**: Each row validated independently
@@ -96,8 +82,8 @@
   - Invalid age (< 0 or non-numeric)
   - Unrecognized gender (not 'male' or 'female')
   - Duplicate names (within file or existing in DB)
-- **No rollback**: Successfully inserted rows remain even if later batches fail (per requirement)
-- **Summary report**: Response includes counts for each failure reason (per requirement)
+- **No rollback**: Successfully inserted rows remain even if later batches fail  
+- **Summary report**: Response includes counts for each failure reason  
 
 ### Concurrent Uploads
 - Multiple admin users can upload simultaneously
@@ -117,25 +103,13 @@
 
 ---
 
-## 5. Implementation Branches
-
-| Branch | Description |
-|--------|-------------|
-| Branch | Description | Requirement |
-|--------|-------------|-------------|
-| `feat/optimize-query-perf-cache` | Task 1: Database indexes, Redis caching, connection pool | Task 1 (Query Performance) |
-| `feat/query-normalization` | Task 2: Query normalization utility | Task 2 (Query Normalization) |
-| `feat/streaming-csv-ingestion` | Task 3: CSV upload with streaming processing | Task 3 (CSV Ingestion) |
-| `feat/csv-upload-queue` | BullMQ queue, worker, job status endpoint, graceful shutdown | Queue migration |
-| `fix/csv-upload-concurrency` | Concurrent uploads, real progress tracking, connection pool config | Bug fixes & optimization |
-| `fix/oauth-route-bugs` | CSRF hardening, OAuth callback redirect fix, route ordering, cors package, docs | Bug fixes & security |
 
 ---
 
-## 6. Testing Recommendations
+## 4. Testing Recommendations
 
-1. **Index performance**: Run `EXPLAIN ANALYZE` on filtered queries before/after migration (verify requirement)
-2. **Cache effectiveness**: Hit same endpoint twice, check Redis for cache key (verify requirement)
+1. **Index performance**: Run `EXPLAIN ANALYZE` on filtered queries before/after migration 
+2. **Cache effectiveness**: Hit same endpoint twice, check Redis for cache key 
 3. **CSV upload**: Test with:
    - Valid 500k-row file
    - File with duplicate names
